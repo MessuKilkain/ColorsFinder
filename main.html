@@ -52,8 +52,8 @@ td {width: 60px; height: 25px; }
 		function supprimerLigne(element) {
 			$(element).parents('tr').first().remove();
 		}
-		function getColorLineHtmlTag(colorBefore,colorAfter) {
-			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before" value="'+colorBefore+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(2)\'),this.value);"/></td><td style="background: '+colorBefore+';" /><td style="background: '+colorAfter+';" /><td><input type="text" class="color-input-after" value="'+colorAfter+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(3)\'),this.value);"/></td></tr>';
+		function getColorLineHtmlTag(colorBefore,colorAfter,distanceToRef) {
+			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before" value="'+colorBefore+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(3)\'),this.value);"/></td><td style="background: '+colorBefore+';" /><td style="background: '+colorAfter+';" /><td><input type="text" class="color-input-after" value="'+colorAfter+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(4)\'),this.value);"/></td><td class="distanceToRef">'+distanceToRef+'</td></tr>';
 		}
 		function ajouterCouleurs(){
 			var colors = $("#new-colors-input").val().split("\n");
@@ -62,29 +62,69 @@ td {width: 60px; height: 25px; }
 				var color = colors[colorIndex];
 				color = color.trim();
 				if(color) {
-					tbody.append(getColorLineHtmlTag(color,color));
+					tbody.append(getColorLineHtmlTag(color,color,""));
 				}
 			}
 		}
-		function sortingColors(){
+		function sortingColorsLab(){
 			var colors = getColors();
-			var referenceW3Color = w3color($("#color-sorting").val());
-			colors = colors.sort(function(a, b){
-				return (w3colorDistance(w3color(a.before), referenceW3Color) - w3colorDistance(w3color(b.before), referenceW3Color));
-			});
+			var referenceW3Color = w3color($("#color-sorting-lab").val());
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
-				console.log(w3color(color.before));
-				console.log(w3colorDistance(w3color(color.before), referenceW3Color));
+				color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
+				console.log(color.distanceToRef);
 			}
+			colors = colors.sort(function(a, b){
+				return (a.distanceToRef - b.distanceToRef);
+			});
 			var tbody = $("#color-tbody");
 			tbody.empty();
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
 				if(color) {
-					tbody.append(getColorLineHtmlTag(color.before,color.after));
+					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef));
 				}
 			}
+		}
+		function sortingColorsCustom(){
+			var colors = getColors();
+			var referenceW3Color = w3color($("#color-sorting-custom").val());
+			var refColorObject = referenceW3Color.toHsl();
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				var colorObject = w3color(color.before).toHsl();
+				var hDist = Math.abs(colorObject.h-refColorObject.h);
+				if( hDist > 180 ) {
+					hDist = 360 - hDist;
+				}
+				color.distanceToRef = Math.pow( Math.pow(hDist,2) + Math.pow((colorObject.s - refColorObject.s)*100,2) + Math.pow((colorObject.l - refColorObject.l)*100,2),0.5);
+				console.log(color.distanceToRef);
+			}
+			colors = colors.sort(function(a, b){
+				return (a.distanceToRef - b.distanceToRef);
+			});
+			var tbody = $("#color-tbody");
+			tbody.empty();
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				if(color) {
+					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef));
+				}
+			}
+		}
+		function exportConversion() {
+			var colors = getColors();
+			var exportConversion = "";
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				if(color && color.before != color.after) {
+					exportConversion += color.before + " => "+ color.after + "\n";
+				}
+			}
+			$("#export-conversion").val(exportConversion);
+		}
+		function copyValTo(element, otherSelector) {
+			$(otherSelector).val($(element).val());
 		}
 		</script>
 		<div>
@@ -92,572 +132,21 @@ td {width: 60px; height: 25px; }
 			<button type="button" onclick="ajouterCouleurs();">Ajouter couleur(s)</button>
 		</div>
 		<div>
-			<input id="color-sorting" type="color"></textarea>
-			<button type="button" onclick="sortingColors();">Trier couleur(s)</button>
+			<input id="color-sorting-lab-code" onchange="copyValTo(this,'#color-sorting-lab');" type="text"/>
+			<input id="color-sorting-lab" onchange="copyValTo(this,'#color-sorting-lab-code');" type="color"/>
+			<button type="button" onclick="sortingColorsLab();">Trier couleur(s) Lab</button>
+		</div>
+		<div>
+			<input id="color-sorting-custom-code" onchange="copyValTo(this,'#color-sorting-custom');" type="text"/>
+			<input id="color-sorting-custom" onchange="copyValTo(this,'#color-sorting-code-custom');" type="color"/>
+			<button type="button" onclick="sortingColorsCustom();">Trier couleur(s) Custom</button>
+		</div>
+		<div>
+			<textarea id="export-conversion" ></textarea>
+			<button type="button" onclick="exportConversion();">Exporter conversion</button>
 		</div>
 		<table>
 			<tbody id="color-tbody">
-				<!--
-				<tr>
-					<td>
-						<input type="text" class="color-input" value=""/>
-					</td>
-					<td style="background: ;" />
-				</tr>
-				-->
-				<!--
-				<tr>
-					<td>
-						<input type="text" class="color-input-before" value="#FFDEF9FF" onchange="adaptColorBackground($(this).parents('tr').first().find('td:nth-child(2)'),this.value);"/>
-					</td>
-					<td style="background: #FFDEF9FF;" />
-					<td style="background: #FFDEF9FF;" />
-					<td>
-						<input type="text" class="color-input-after" value="#FFDEF9FF" onchange="adaptColorBackground($(this).parents('tr').first().find('td:nth-child(3)'),this.value);"/>
-					</td>
-				</tr>
-				<tr><td><input type="text" class="color-input" value="#515151"/></td><td style="background: #515151;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#49494C"/></td><td style="background: #49494C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF3C3C3C"/></td><td style="background: #FF3C3C3C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B8DEF0"/></td><td style="background: #B8DEF0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD15400"/></td><td style="background: #FFD15400;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE8E8E8"/></td><td style="background: #FFE8E8E8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8AACA3"/></td><td style="background: #8AACA3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ACCBE7"/></td><td style="background: #ACCBE7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#003BB3"/></td><td style="background: #003BB3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8DABCA"/></td><td style="background: #8DABCA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D9D8D9"/></td><td style="background: #D9D8D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#363636"/></td><td style="background: #363636;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#088A08"/></td><td style="background: #088A08;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ECECEC"/></td><td style="background: #ECECEC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#252525"/></td><td style="background: #252525;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00000000"/></td><td style="background: #00000000;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#555555"/></td><td style="background: #555555;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#31B0D5"/></td><td style="background: #31B0D5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F8F8F8"/></td><td style="background: #F8F8F8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C2CCD1"/></td><td style="background: #C2CCD1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B92C28"/></td><td style="background: #B92C28;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2B81AF"/></td><td style="background: #2B81AF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0076AC"/></td><td style="background: #0076AC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CD0A0A"/></td><td style="background: #CD0A0A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BFE3C3"/></td><td style="background: #BFE3C3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF151515"/></td><td style="background: #FF151515;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E38D13"/></td><td style="background: #E38D13;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0D3349"/></td><td style="background: #0D3349;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B74949"/></td><td style="background: #B74949;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3C510C"/></td><td style="background: #3C510C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF265A88"/></td><td style="background: #FF265A88;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD9534F"/></td><td style="background: #FFD9534F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3C763D"/></td><td style="background: #3C763D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D6E9C6"/></td><td style="background: #D6E9C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3063A6"/></td><td style="background: #3063A6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#000000"/></td><td style="background: #000000;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#265A88"/></td><td style="background: #265A88;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFFC600"/></td><td style="background: #FFFFC600;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D1D1D1"/></td><td style="background: #D1D1D1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#24748C"/></td><td style="background: #24748C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF2F2F2"/></td><td style="background: #FFF2F2F2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD7D8D9"/></td><td style="background: #FFD7D8D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#262626"/></td><td style="background: #262626;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF339BB9"/></td><td style="background: #FF339BB9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FAFAFA"/></td><td style="background: #FAFAFA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D1A6D0"/></td><td style="background: #D1A6D0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF080808"/></td><td style="background: #FF080808;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F8E5BE"/></td><td style="background: #F8E5BE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C31532"/></td><td style="background: #C31532;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#286090"/></td><td style="background: #286090;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#57A957"/></td><td style="background: #57A957;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF6363"/></td><td style="background: #FF6363;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#7ABA7B"/></td><td style="background: #7ABA7B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2AABD2"/></td><td style="background: #2AABD2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C8E5BC"/></td><td style="background: #C8E5BC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#9B9B9B"/></td><td style="background: #9B9B9B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF449D44"/></td><td style="background: #FF449D44;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC31632"/></td><td style="background: #FFC31632;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A8A7A7"/></td><td style="background: #A8A7A7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#006593"/></td><td style="background: #006593;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00567E"/></td><td style="background: #00567E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#942A25"/></td><td style="background: #942A25;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#9D9D9D"/></td><td style="background: #9D9D9D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F69CCD"/></td><td style="background: #F69CCD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A1A1A1"/></td><td style="background: #A1A1A1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AFD9EE"/></td><td style="background: #AFD9EE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE2E2E2"/></td><td style="background: #FFE2E2E2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#204D74"/></td><td style="background: #204D74;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BDD6EC"/></td><td style="background: #BDD6EC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#676767"/></td><td style="background: #676767;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFDBDBDB"/></td><td style="background: #FFDBDBDB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#398439"/></td><td style="background: #398439;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CF5C14"/></td><td style="background: #CF5C14;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF51A351"/></td><td style="background: #FF51A351;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF871685"/></td><td style="background: #FF871685;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#79B7E7"/></td><td style="background: #79B7E7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC12E2A"/></td><td style="background: #FFC12E2A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#528CE0"/></td><td style="background: #528CE0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A94442"/></td><td style="background: #A94442;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F0F0F0"/></td><td style="background: #F0F0F0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C7DDEF"/></td><td style="background: #C7DDEF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A84444"/></td><td style="background: #A84444;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CBCDCF"/></td><td style="background: #CBCDCF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BACCE0"/></td><td style="background: #BACCE0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E3E3E3"/></td><td style="background: #E3E3E3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#871685"/></td><td style="background: #871685;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF3A5C2A"/></td><td style="background: #FF3A5C2A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AD6704"/></td><td style="background: #AD6704;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC8E5BC"/></td><td style="background: #FFC8E5BC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00006A"/></td><td style="background: #00006A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B7B7B7"/></td><td style="background: #B7B7B7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0480BE"/></td><td style="background: #FF0480BE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C7254E"/></td><td style="background: #C7254E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EC971F"/></td><td style="background: #EC971F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF57A957"/></td><td style="background: #FF57A957;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FEFEFE"/></td><td style="background: #FEFEFE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DCADA7"/></td><td style="background: #DCADA7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFDFF0D8"/></td><td style="background: #FFDFF0D8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFAF2CC"/></td><td style="background: #FFFAF2CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#151515"/></td><td style="background: #151515;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2858A0"/></td><td style="background: #2858A0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F4F4F4"/></td><td style="background: #F4F4F4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CFE1E9"/></td><td style="background: #CFE1E9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F5C6B5"/></td><td style="background: #F5C6B5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8A9C84"/></td><td style="background: #8A9C84;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FDD49A"/></td><td style="background: #FDD49A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C9F9C6"/></td><td style="background: #C9F9C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC600"/></td><td style="background: #FFC600;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CCCCCC"/></td><td style="background: #CCCCCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1F6377"/></td><td style="background: #1F6377;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BABEBF"/></td><td style="background: #BABEBF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#51A351"/></td><td style="background: #51A351;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBED50"/></td><td style="background: #FBED50;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1D3D75"/></td><td style="background: #1D3D75;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC82337"/></td><td style="background: #FFC82337;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#767676"/></td><td style="background: #767676;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C6E746"/></td><td style="background: #C6E746;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF5F5F5"/></td><td style="background: #FFF5F5F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#953B39"/></td><td style="background: #953B39;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EFBC01"/></td><td style="background: #EFBC01;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E8E8E8"/></td><td style="background: #E8E8E8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#269ABC"/></td><td style="background: #269ABC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F89406"/></td><td style="background: #F89406;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#506941"/></td><td style="background: #506941;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C9302C"/></td><td style="background: #C9302C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF444444"/></td><td style="background: #FF444444;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#81C0C9"/></td><td style="background: #81C0C9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A9302A"/></td><td style="background: #A9302A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F8F7F5"/></td><td style="background: #F8F7F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF8F8F8"/></td><td style="background: #FFF8F8F8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFEBCCCC"/></td><td style="background: #FFEBCCCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D15400"/></td><td style="background: #D15400;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#49AFCD"/></td><td style="background: #49AFCD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3276B1"/></td><td style="background: #3276B1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DCEAF5"/></td><td style="background: #DCEAF5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4C653C"/></td><td style="background: #4C653C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EBEBEB"/></td><td style="background: #EBEBEB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#23527C"/></td><td style="background: #23527C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0088CC"/></td><td style="background: #0088CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF2F96B4"/></td><td style="background: #FF2F96B4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EE5757"/></td><td style="background: #EE5757;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E0F2BE"/></td><td style="background: #E0F2BE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8A6D3B"/></td><td style="background: #8A6D3B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ABABAB"/></td><td style="background: #ABABAB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2B542C"/></td><td style="background: #2B542C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C1C1C1"/></td><td style="background: #C1C1C1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EBCCCC"/></td><td style="background: #EBCCCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#679CBE"/></td><td style="background: #679CBE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D5D5D5"/></td><td style="background: #D5D5D5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3E8F3E"/></td><td style="background: #3E8F3E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5BC0DE"/></td><td style="background: #5BC0DE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#777777"/></td><td style="background: #777777;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF62C462"/></td><td style="background: #FF62C462;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#80000000"/></td><td style="background: #80000000;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FAEBCC"/></td><td style="background: #FAEBCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#710909"/></td><td style="background: #710909;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EFFCFF"/></td><td style="background: #EFFCFF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#39B3D7"/></td><td style="background: #39B3D7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7E1B5"/></td><td style="background: #F7E1B5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF6060"/></td><td style="background: #FF6060;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0F0F0F"/></td><td style="background: #0F0F0F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#899BA9"/></td><td style="background: #899BA9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFEC971F"/></td><td style="background: #FFEC971F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C67605"/></td><td style="background: #C67605;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF89406"/></td><td style="background: #FFF89406;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#9ACFEA"/></td><td style="background: #9ACFEA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3278B3"/></td><td style="background: #3278B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#067299"/></td><td style="background: #067299;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F8B9B7"/></td><td style="background: #F8B9B7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ADADAD"/></td><td style="background: #ADADAD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#046497"/></td><td style="background: #046497;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E2E2E2"/></td><td style="background: #E2E2E2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F2F2F2"/></td><td style="background: #F2F2F2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#008AC9"/></td><td style="background: #008AC9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DBC59E"/></td><td style="background: #DBC59E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0071AD"/></td><td style="background: #FF0071AD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CAC8D4"/></td><td style="background: #CAC8D4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BFBFBF"/></td><td style="background: #BFBFBF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5884A3"/></td><td style="background: #5884A3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBEED5"/></td><td style="background: #FBEED5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C2C1C1"/></td><td style="background: #C2C1C1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFCACA"/></td><td style="background: #FFCACA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#299AD2"/></td><td style="background: #299AD2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DCDCDC"/></td><td style="background: #DCDCDC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0077B3"/></td><td style="background: #FF0077B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF0AD4E"/></td><td style="background: #FFF0AD4E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1D5987"/></td><td style="background: #1D5987;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#37A6D9"/></td><td style="background: #37A6D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#861E83"/></td><td style="background: #861E83;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F5F8F9"/></td><td style="background: #F5F8F9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#106095"/></td><td style="background: #106095;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8DACBC"/></td><td style="background: #8DACBC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF8040"/></td><td style="background: #FF8040;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#337AB7"/></td><td style="background: #337AB7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0087C9"/></td><td style="background: #0087C9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A9CACD"/></td><td style="background: #A9CACD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FCFDFD"/></td><td style="background: #FCFDFD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFDCEAF5"/></td><td style="background: #FFDCEAF5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8B0C73"/></td><td style="background: #8B0C73;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0000"/></td><td style="background: #FF0000;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DBDCDC"/></td><td style="background: #DBDCDC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#333333"/></td><td style="background: #333333;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD0E9C6"/></td><td style="background: #FFD0E9C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F9F9F9"/></td><td style="background: #F9F9F9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5A8442"/></td><td style="background: #5A8442;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DE7477"/></td><td style="background: #DE7477;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF419641"/></td><td style="background: #FF419641;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3C3C3C"/></td><td style="background: #3C3C3C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A2318B"/></td><td style="background: #A2318B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5CB85C"/></td><td style="background: #5CB85C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BACFE3"/></td><td style="background: #BACFE3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#468847"/></td><td style="background: #468847;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C09853"/></td><td style="background: #C09853;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#26A345"/></td><td style="background: #26A345;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF428BCA"/></td><td style="background: #FF428BCA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EE5F5B"/></td><td style="background: #EE5F5B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E4B9B9"/></td><td style="background: #E4B9B9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFCE8DB"/></td><td style="background: #FFFCE8DB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C3C8CD"/></td><td style="background: #C3C8CD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FAF2CC"/></td><td style="background: #FAF2CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DFF0D8"/></td><td style="background: #DFF0D8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF9999"/></td><td style="background: #FF9999;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D59392"/></td><td style="background: #D59392;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFECECEC"/></td><td style="background: #FFECECEC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1A1A1A"/></td><td style="background: #1A1A1A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#002A80"/></td><td style="background: #002A80;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A9DBA9"/></td><td style="background: #A9DBA9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#656565"/></td><td style="background: #656565;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C0C0C0"/></td><td style="background: #C0C0C0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DFEFFC"/></td><td style="background: #DFEFFC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F8EFC0"/></td><td style="background: #F8EFC0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EEEEEE"/></td><td style="background: #EEEEEE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0F6500"/></td><td style="background: #0F6500;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#428BCA"/></td><td style="background: #428BCA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E5E5E5"/></td><td style="background: #E5E5E5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ED9C28"/></td><td style="background: #ED9C28;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#909090"/></td><td style="background: #909090;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FCF8E3"/></td><td style="background: #FCF8E3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5E5E5E"/></td><td style="background: #5E5E5E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AA8866"/></td><td style="background: #AA8866;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DFECF6"/></td><td style="background: #DFECF6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C82337"/></td><td style="background: #C82337;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#999999"/></td><td style="background: #999999;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E4B9C0"/></td><td style="background: #E4B9C0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F9F2F4"/></td><td style="background: #F9F2F4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FCE8DB"/></td><td style="background: #FCE8DB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FDF59A"/></td><td style="background: #FDF59A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF7465C"/></td><td style="background: #FFF7465C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7F7F9"/></td><td style="background: #F7F7F9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBB450"/></td><td style="background: #FBB450;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D0E9C6"/></td><td style="background: #D0E9C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F1F1F1"/></td><td style="background: #F1F1F1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF286090"/></td><td style="background: #FF286090;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2B669A"/></td><td style="background: #2B669A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DCA7A7"/></td><td style="background: #DCA7A7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF337AB7"/></td><td style="background: #FF337AB7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C38EC7"/></td><td style="background: #C38EC7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8B0C72"/></td><td style="background: #8B0C72;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC9302C"/></td><td style="background: #FFC9302C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#565656"/></td><td style="background: #565656;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E5E7E2"/></td><td style="background: #E5E7E2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D4D4D4"/></td><td style="background: #D4D4D4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2E6DA4"/></td><td style="background: #2E6DA4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E1E1E8"/></td><td style="background: #E1E1E8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#387038"/></td><td style="background: #387038;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7465C"/></td><td style="background: #F7465C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DF6E44"/></td><td style="background: #DF6E44;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E6C1C7"/></td><td style="background: #E6C1C7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#419641"/></td><td style="background: #419641;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C7C1C1"/></td><td style="background: #C7C1C1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2A85A0"/></td><td style="background: #2A85A0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#499249"/></td><td style="background: #499249;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D9D9D9"/></td><td style="background: #D9D9D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF5CB85C"/></td><td style="background: #FF5CB85C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AAAAAA"/></td><td style="background: #AAAAAA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE5E5E5"/></td><td style="background: #FFE5E5E5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF2DEDE"/></td><td style="background: #FFF2DEDE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF2B669A"/></td><td style="background: #FF2B669A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBFBFB"/></td><td style="background: #FBFBFB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D2E0E6"/></td><td style="background: #D2E0E6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DFF2BF"/></td><td style="background: #DFF2BF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF149BDF"/></td><td style="background: #FF149BDF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD2D2"/></td><td style="background: #FFD2D2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FDFDFD"/></td><td style="background: #FDFDFD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7ECB5"/></td><td style="background: #F7ECB5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF3278B3"/></td><td style="background: #FF3278B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#002F7D"/></td><td style="background: #002F7D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0E0E0E"/></td><td style="background: #0E0E0E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0480BE"/></td><td style="background: #0480BE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#666666"/></td><td style="background: #666666;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#222222"/></td><td style="background: #222222;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00C317"/></td><td style="background: #00C317;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBEC88"/></td><td style="background: #FBEC88;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#408140"/></td><td style="background: #408140;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C90300"/></td><td style="background: #C90300;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFB6AD"/></td><td style="background: #FFB6AD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#040404"/></td><td style="background: #040404;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AA509A"/></td><td style="background: #AA509A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#000066"/></td><td style="background: #000066;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A13021"/></td><td style="background: #A13021;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF31B0D5"/></td><td style="background: #FF31B0D5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D4329F"/></td><td style="background: #D4329F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B9DEF0"/></td><td style="background: #B9DEF0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#69A9CA"/></td><td style="background: #69A9CA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#92ACCB"/></td><td style="background: #92ACCB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF357EBD"/></td><td style="background: #FF357EBD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFD9EDF7"/></td><td style="background: #FFD9EDF7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B8B8B9"/></td><td style="background: #B8B8B9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DF007C"/></td><td style="background: #DF007C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#808080"/></td><td style="background: #808080;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF37A6D9"/></td><td style="background: #FF37A6D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A5597E"/></td><td style="background: #A5597E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF9F9F9"/></td><td style="background: #FFF9F9F9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#245580"/></td><td style="background: #245580;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E4FFEC"/></td><td style="background: #E4FFEC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5C9CCC"/></td><td style="background: #5C9CCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D4E2F1"/></td><td style="background: #D4E2F1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F5F5F5"/></td><td style="background: #F5F5F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1B1B1B"/></td><td style="background: #1B1B1B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFA5597E"/></td><td style="background: #FFA5597E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#66512C"/></td><td style="background: #66512C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0044CC"/></td><td style="background: #0044CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A47E3C"/></td><td style="background: #A47E3C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C1E2B3"/></td><td style="background: #C1E2B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF3071A9"/></td><td style="background: #FF3071A9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#001B48"/></td><td style="background: #001B48;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B2DBA1"/></td><td style="background: #B2DBA1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0E90D2"/></td><td style="background: #0E90D2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#6B6B6B"/></td><td style="background: #6B6B6B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FAD42E"/></td><td style="background: #FAD42E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D4D0C8"/></td><td style="background: #D4D0C8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ABADB3"/></td><td style="background: #ABADB3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EEA236"/></td><td style="background: #EEA236;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#9CD3EC"/></td><td style="background: #9CD3EC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3A5C2A"/></td><td style="background: #3A5C2A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#285E8E"/></td><td style="background: #285E8E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#38C54F"/></td><td style="background: #38C54F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0081C2"/></td><td style="background: #0081C2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF8B0C72"/></td><td style="background: #FF8B0C72;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DA4F49"/></td><td style="background: #DA4F49;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EFEFEF"/></td><td style="background: #EFEFEF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5EB95E"/></td><td style="background: #5EB95E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF2E6DA4"/></td><td style="background: #FF2E6DA4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF222222"/></td><td style="background: #FF222222;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C0A16B"/></td><td style="background: #C0A16B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#888888"/></td><td style="background: #888888;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#737373"/></td><td style="background: #737373;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#62C462"/></td><td style="background: #62C462;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EED3D7"/></td><td style="background: #EED3D7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#47A447"/></td><td style="background: #47A447;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D3F5DC"/></td><td style="background: #D3F5DC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#008BC6"/></td><td style="background: #008BC6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE6E6E6"/></td><td style="background: #FFE6E6E6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E7E7E7"/></td><td style="background: #E7E7E7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2895C8"/></td><td style="background: #2895C8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C66200"/></td><td style="background: #C66200;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ABECA5"/></td><td style="background: #ABECA5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2A6496"/></td><td style="background: #2A6496;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CBD3C6"/></td><td style="background: #CBD3C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F2DEDE"/></td><td style="background: #F2DEDE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00AC0D"/></td><td style="background: #00AC0D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D9EDF7"/></td><td style="background: #D9EDF7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C9E2B3"/></td><td style="background: #C9E2B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF111111"/></td><td style="background: #FF111111;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DEEBF4"/></td><td style="background: #DEEBF4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E6E6E6"/></td><td style="background: #E6E6E6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8ED59F"/></td><td style="background: #8ED59F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#444444"/></td><td style="background: #444444;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#6E6E6E"/></td><td style="background: #6E6E6E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFEB9316"/></td><td style="background: #FFEB9316;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BCE8F1"/></td><td style="background: #BCE8F1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A6E1EC"/></td><td style="background: #A6E1EC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#848484"/></td><td style="background: #848484;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#374E0C"/></td><td style="background: #374E0C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DBDBDB"/></td><td style="background: #DBDBDB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC3C3"/></td><td style="background: #FFC3C3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFE9901"/></td><td style="background: #FFFE9901;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC43C35"/></td><td style="background: #FFC43C35;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#981D2C"/></td><td style="background: #981D2C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF5BC0DE"/></td><td style="background: #FF5BC0DE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ABC9CB"/></td><td style="background: #ABC9CB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B94A48"/></td><td style="background: #B94A48;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D9534F"/></td><td style="background: #D9534F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D0D0D0"/></td><td style="background: #D0D0D0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF5A8442"/></td><td style="background: #FF5A8442;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#46B8DA"/></td><td style="background: #46B8DA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C3325F"/></td><td style="background: #C3325F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5EBEB9"/></td><td style="background: #5EBEB9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#787878"/></td><td style="background: #787878;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#64858C"/></td><td style="background: #64858C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2A64A4"/></td><td style="background: #2A64A4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D7D8D9"/></td><td style="background: #D7D8D9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4EB2E0"/></td><td style="background: #4EB2E0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A6C9E2"/></td><td style="background: #A6C9E2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0088CC"/></td><td style="background: #FF0088CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#111111"/></td><td style="background: #111111;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D0E5F5"/></td><td style="background: #D0E5F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C43C35"/></td><td style="background: #C43C35;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FEB144"/></td><td style="background: #FEB144;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DEF9FF"/></td><td style="background: #DEF9FF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D2322D"/></td><td style="background: #D2322D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C12E2A"/></td><td style="background: #C12E2A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#6F7074"/></td><td style="background: #6F7074;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#449D44"/></td><td style="background: #449D44;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0044CC"/></td><td style="background: #FF0044CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D8000C"/></td><td style="background: #D8000C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#AC2925"/></td><td style="background: #AC2925;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FEF1EC"/></td><td style="background: #FEF1EC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A83500"/></td><td style="background: #A83500;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C4E3F3"/></td><td style="background: #C4E3F3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5E740B"/></td><td style="background: #5E740B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#46A546"/></td><td style="background: #46A546;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FE9901"/></td><td style="background: #FE9901;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#006DCC"/></td><td style="background: #006DCC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#981D2C10"/></td><td style="background: #981D2C10;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C4C4C4"/></td><td style="background: #C4C4C4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EBCCD1"/></td><td style="background: #EBCCD1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF2895C8"/></td><td style="background: #FF2895C8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#245269"/></td><td style="background: #245269;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2D6987"/></td><td style="background: #2D6987;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CC263A"/></td><td style="background: #CC263A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1584BB"/></td><td style="background: #1584BB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E17009"/></td><td style="background: #E17009;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FAA732"/></td><td style="background: #FAA732;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FCFCFC"/></td><td style="background: #FCFCFC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#008AD5"/></td><td style="background: #008AD5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0077B3"/></td><td style="background: #0077B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F6FAFA"/></td><td style="background: #F6FAFA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFFFF"/></td><td style="background: #FFFFFF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#28A4C9"/></td><td style="background: #28A4C9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE7C3C3"/></td><td style="background: #FFE7C3C3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C9D9F5"/></td><td style="background: #C9D9F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F9FBFD"/></td><td style="background: #F9FBFD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#ACA899"/></td><td style="background: #ACA899;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F6F6F6"/></td><td style="background: #F6F6F6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#58585A"/></td><td style="background: #58585A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFEE5F5B"/></td><td style="background: #FFEE5F5B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFB9DEF0"/></td><td style="background: #FFB9DEF0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#080808"/></td><td style="background: #080808;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#7A43B6"/></td><td style="background: #7A43B6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A7367E"/></td><td style="background: #A7367E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#1D99D1"/></td><td style="background: #1D99D1;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F52F5F"/></td><td style="background: #F52F5F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#5BB75B"/></td><td style="background: #5BB75B;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF0F0F0F"/></td><td style="background: #FF0F0F0F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F0F2F5"/></td><td style="background: #F0F2F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C5DBEC"/></td><td style="background: #C5DBEC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CDCDCD"/></td><td style="background: #CDCDCD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFDB7C"/></td><td style="background: #FFDB7C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A86666"/></td><td style="background: #A86666;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#101010"/></td><td style="background: #101010;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#64B1D8"/></td><td style="background: #64B1D8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A6C6D6"/></td><td style="background: #A6C6D6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D43F3A"/></td><td style="background: #D43F3A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#356635"/></td><td style="background: #356635;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC9F9C6"/></td><td style="background: #FFC9F9C6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE52C43"/></td><td style="background: #FFE52C43;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFCF8E3"/></td><td style="background: #FFFCF8E3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#6699CC"/></td><td style="background: #6699CC;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4CAE4C"/></td><td style="background: #4CAE4C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#003399"/></td><td style="background: #003399;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E7C3C3"/></td><td style="background: #E7C3C3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#31708F"/></td><td style="background: #31708F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFBD362F"/></td><td style="background: #FFBD362F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FDE19A"/></td><td style="background: #FDE19A;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EB9316"/></td><td style="background: #EB9316;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#545454"/></td><td style="background: #545454;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFEBEBEB"/></td><td style="background: #FFEBEBEB;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7F7F7"/></td><td style="background: #F7F7F7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A5C992"/></td><td style="background: #A5C992;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4BB1CF"/></td><td style="background: #4BB1CF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E9E8F0"/></td><td style="background: #E9E8F0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DDDDDD"/></td><td style="background: #DDDDDD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFA7367E"/></td><td style="background: #FFA7367E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF8EFC0"/></td><td style="background: #FFF8EFC0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF7DDE8"/></td><td style="background: #FFF7DDE8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DF8505"/></td><td style="background: #DF8505;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF6F6F6"/></td><td style="background: #FFF6F6F6;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#802420"/></td><td style="background: #802420;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#005580"/></td><td style="background: #005580;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F5E79E"/></td><td style="background: #F5E79E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2E6E9E"/></td><td style="background: #2E6E9E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#A4A9AD"/></td><td style="background: #A4A9AD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2D6CA2"/></td><td style="background: #2D6CA2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFA83500"/></td><td style="background: #FFA83500;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DD514C"/></td><td style="background: #DD514C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2F96B4"/></td><td style="background: #2F96B4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D4651E"/></td><td style="background: #D4651E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#66AFE9"/></td><td style="background: #66AFE9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#85C7E5"/></td><td style="background: #85C7E5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00B3EE"/></td><td style="background: #00B3EE;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#CE8483"/></td><td style="background: #CE8483;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#993366"/></td><td style="background: #993366;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D9D9DA"/></td><td style="background: #D9D9DA;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#843534"/></td><td style="background: #843534;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFE0E0E0"/></td><td style="background: #FFE0E0E0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFFFFFF"/></td><td style="background: #FFFFFFFF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#C31632"/></td><td style="background: #C31632;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#96D8F5"/></td><td style="background: #96D8F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#69C480"/></td><td style="background: #69C480;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#BD362F"/></td><td style="background: #BD362F;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FBF069"/></td><td style="background: #FBF069;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0000FF"/></td><td style="background: #0000FF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F18999"/></td><td style="background: #F18999;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFF0F0F0"/></td><td style="background: #FFF0F0F0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#7AB5D3"/></td><td style="background: #7AB5D3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3A87AD"/></td><td style="background: #3A87AD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E0E0E0"/></td><td style="background: #E0E0E0;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F7DDE8"/></td><td style="background: #F7DDE8;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#00C910"/></td><td style="background: #00C910;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#3071A9"/></td><td style="background: #3071A9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#B3B3B3"/></td><td style="background: #B3B3B3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E52C43"/></td><td style="background: #E52C43;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4F8A10"/></td><td style="background: #4F8A10;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF2AABD2"/></td><td style="background: #FF2AABD2;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#366097"/></td><td style="background: #366097;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#149BDF"/></td><td style="background: #149BDF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#D58512"/></td><td style="background: #D58512;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#579397"/></td><td style="background: #579397;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#8699A4"/></td><td style="background: #8699A4;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#EDEDED"/></td><td style="background: #EDEDED;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0071AD"/></td><td style="background: #0071AD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFABECA5"/></td><td style="background: #FFABECA5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E9F3F5"/></td><td style="background: #E9F3F5;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#595959"/></td><td style="background: #595959;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#4297D7"/></td><td style="background: #4297D7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFC4E3F3"/></td><td style="background: #FFC4E3F3;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#67B168"/></td><td style="background: #67B168;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E0ACB7"/></td><td style="background: #E0ACB7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#2C6095"/></td><td style="background: #2C6095;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E9322D"/></td><td style="background: #E9322D;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E67876"/></td><td style="background: #E67876;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#339BB9"/></td><td style="background: #339BB9;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#DDE9EF"/></td><td style="background: #DDE9EF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#F0AD4E"/></td><td style="background: #F0AD4E;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF981D2C"/></td><td style="background: #FF981D2C;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#E1EDF7"/></td><td style="background: #E1EDF7;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#357EBD"/></td><td style="background: #357EBD;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#0A4900"/></td><td style="background: #0A4900;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FFFBB450"/></td><td style="background: #FFFBB450;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#FF040404"/></td><td style="background: #FF040404;" /></tr>
-				 -->
 			</tbody>
 		</table>
 	</body>
