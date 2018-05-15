@@ -112,6 +112,18 @@ td {width: 60px; height: 25px; }
 				}
 			}
 		}
+		function buildDistanceLabGrid(){
+			var colors = getColors();
+			var distanceGrid = {};
+			for (var colorIndex1 = 0; colorIndex1 < colors.length; colorIndex1++) {
+				var color1 = colors[colorIndex1];
+				for (var colorIndex2 = colorIndex1; colorIndex2 < colors.length; colorIndex2++) {
+					var color2 = colors[colorIndex2];
+				}
+				//color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
+				console.log(color.distanceToRef);
+			}
+		}
 		function exportConversion() {
 			var colors = getColors();
 			var exportConversion = "";
