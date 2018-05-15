@@ -1,19 +1,102 @@
 <!doctype html>
 <html>
 	<head>
+		<script src='w3color.js'></script>
 		<meta charset="utf-8"/>
 		<style>
 td, tr, table {border: solid 1px black;}
-td {width: 120px; height: 80px; }
+td {width: 60px; height: 25px; }
 		</style>
 		<title>Couleurs</title>
 	</head>
 	<body>
-		<script src="jquery.js"/>
+		<script src="jquery-3.3.1.js"></script>
+		<script src="labColor.js" ></script>
+		<script src="diff.js" ></script>
 		<script>
+		function getColors() {
+			var colors = [];
+			$("#color-tbody tr").each(function(index, element){
+				colors.push({
+					before:$(element).find(".color-input-before").first().val(),
+					after:$(element).find(".color-input-after").first().val()
+				});
+			});
+			return colors;
+		}
+		function w3colorDistance(colorA, colorB) {
+			var aArrayLab = RGBtoLAB(colorA.red, colorA.green, colorA.blue);
+			var bArrayLab = RGBtoLAB(colorB.red, colorB.green, colorB.blue);
+			return ciede2000(
+				{
+					L:aArrayLab[0],
+					a:aArrayLab[1],
+					b:aArrayLab[2]
+				},
+				{
+					L:bArrayLab[0],
+					a:bArrayLab[1],
+					b:bArrayLab[2]
+				}
+			);
+		}
+		function adaptColorBackground(jQueryElement,value){
+			console.log(jQueryElement);
+			console.log(value);
+			if(!value.startsWith("#"))
+			{
+				value = "#" + value;
+			}
+			jQueryElement.css("background",value);
+		};
+		function supprimerLigne(element) {
+			$(element).parents('tr').first().remove();
+		}
+		function getColorLineHtmlTag(colorBefore,colorAfter) {
+			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before" value="'+colorBefore+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(2)\'),this.value);"/></td><td style="background: '+colorBefore+';" /><td style="background: '+colorAfter+';" /><td><input type="text" class="color-input-after" value="'+colorAfter+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(3)\'),this.value);"/></td></tr>';
+		}
+		function ajouterCouleurs(){
+			var colors = $("#new-colors-input").val().split("\n");
+			var tbody = $("#color-tbody");
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				color = color.trim();
+				if(color) {
+					tbody.append(getColorLineHtmlTag(color,color));
+				}
+			}
+		}
+		function sortingColors(){
+			var colors = getColors();
+			var referenceW3Color = w3color($("#color-sorting").val());
+			colors = colors.sort(function(a, b){
+				return (w3colorDistance(w3color(a.before), referenceW3Color) - w3colorDistance(w3color(b.before), referenceW3Color));
+			});
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				console.log(w3color(color.before));
+				console.log(w3colorDistance(w3color(color.before), referenceW3Color));
+			}
+			var tbody = $("#color-tbody");
+			tbody.empty();
+			for( var colorIndex in colors ) {
+				var color = colors[colorIndex];
+				if(color) {
+					tbody.append(getColorLineHtmlTag(color.before,color.after));
+				}
+			}
+		}
 		</script>
+		<div>
+			<textarea id="new-colors-input" ></textarea>
+			<button type="button" onclick="ajouterCouleurs();">Ajouter couleur(s)</button>
+		</div>
+		<div>
+			<input id="color-sorting" type="color"></textarea>
+			<button type="button" onclick="sortingColors();">Trier couleur(s)</button>
+		</div>
 		<table>
-			<tbody>
+			<tbody id="color-tbody">
 				<!--
 				<tr>
 					<td>
@@ -22,8 +105,18 @@ td {width: 120px; height: 80px; }
 					<td style="background: ;" />
 				</tr>
 				-->
-				 <tr><td><input type="text" class="color-input" value="#FFDEF9FF"/></td><td style="background: #FFDEF9FF;" /></tr>
-				 <tr><td><input type="text" class="color-input" value="#515151"/></td><td style="background: #515151;" /></tr>
+				<!--
+				<tr>
+					<td>
+						<input type="text" class="color-input-before" value="#FFDEF9FF" onchange="adaptColorBackground($(this).parents('tr').first().find('td:nth-child(2)'),this.value);"/>
+					</td>
+					<td style="background: #FFDEF9FF;" />
+					<td style="background: #FFDEF9FF;" />
+					<td>
+						<input type="text" class="color-input-after" value="#FFDEF9FF" onchange="adaptColorBackground($(this).parents('tr').first().find('td:nth-child(3)'),this.value);"/>
+					</td>
+				</tr>
+				<tr><td><input type="text" class="color-input" value="#515151"/></td><td style="background: #515151;" /></tr>
 				 <tr><td><input type="text" class="color-input" value="#49494C"/></td><td style="background: #49494C;" /></tr>
 				 <tr><td><input type="text" class="color-input" value="#FF3C3C3C"/></td><td style="background: #FF3C3C3C;" /></tr>
 				 <tr><td><input type="text" class="color-input" value="#B8DEF0"/></td><td style="background: #B8DEF0;" /></tr>
@@ -564,6 +657,7 @@ td {width: 120px; height: 80px; }
 				 <tr><td><input type="text" class="color-input" value="#0A4900"/></td><td style="background: #0A4900;" /></tr>
 				 <tr><td><input type="text" class="color-input" value="#FFFBB450"/></td><td style="background: #FFFBB450;" /></tr>
 				 <tr><td><input type="text" class="color-input" value="#FF040404"/></td><td style="background: #FF040404;" /></tr>
+				 -->
 			</tbody>
 		</table>
 	</body>
