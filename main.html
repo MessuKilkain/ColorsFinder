@@ -53,7 +53,7 @@ td {width: 60px; height: 25px; }
 			$(element).parents('tr').first().remove();
 		}
 		function getColorLineHtmlTag(colorBefore,colorAfter,distanceToRef) {
-			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before" value="'+colorBefore+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(3)\'),this.value);"/></td><td style="background: '+colorBefore+';" /><td style="background: '+colorAfter+';" /><td><input type="text" class="color-input-after" value="'+colorAfter+'" onchange="adaptColorBackground($(this).parents(\'tr\').first().find(\'td:nth-child(4)\'),this.value);"/></td><td class="distanceToRef">'+distanceToRef+'</td></tr>';
+			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before-code" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before\'));"/></td><td><input type="color" class="color-input-before" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before-code\'));"/></td><td><input type="color" class="color-input-after" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after-code\'));"/></td><td><input type="text" class="color-input-after-code" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after\'));"/></td><td class="distanceToRef">'+distanceToRef+'</td></tr>';
 		}
 		function ajouterCouleurs(){
 			var colors = $("#new-colors-input").val().split("\n");
@@ -114,15 +114,28 @@ td {width: 60px; height: 25px; }
 		}
 		function buildDistanceLabGrid(){
 			var colors = getColors();
+			colors = colors.sort(function(str1, str2){
+				return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
+			});
 			var distanceGrid = {};
+			var distanceList = [];
 			for (var colorIndex1 = 0; colorIndex1 < colors.length; colorIndex1++) {
 				var color1 = colors[colorIndex1];
+				if(!(color1.before in distanceGrid)) {
+					distanceGrid[color1.before] = {};
+				}
 				for (var colorIndex2 = colorIndex1; colorIndex2 < colors.length; colorIndex2++) {
 					var color2 = colors[colorIndex2];
+					if(!(color2.before in distanceGrid)) {
+						distanceGrid[color2.before] = {};
+					}
+					var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
+					distanceGrid[color1.before][color2.before] = distance;
+					distanceGrid[color2.before][color1.before] = distance;
+					distanceList[color1.before+"-"+color2.before] = distance;
 				}
-				//color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
-				console.log(color.distanceToRef);
 			}
+			return {"grid":distanceGrid,"list":distanceList};
 		}
 		function exportConversion() {
 			var colors = getColors();
@@ -130,13 +143,16 @@ td {width: 60px; height: 25px; }
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
 				if(color && color.before != color.after) {
-					exportConversion += color.before + " => "+ color.after + "\n";
+					exportConversion += color.before + " => " + color.after + "\n";
 				}
 			}
 			$("#export-conversion").val(exportConversion);
 		}
 		function copyValTo(element, otherSelector) {
 			$(otherSelector).val($(element).val());
+		}
+		function displayProximityColorGroupList() {
+			var tbodyElement = $('#proximity-color-group-list');
 		}
 		</script>
 		<div>
@@ -156,6 +172,13 @@ td {width: 60px; height: 25px; }
 		<div>
 			<textarea id="export-conversion" ></textarea>
 			<button type="button" onclick="exportConversion();">Exporter conversion</button>
+		</div>
+		<div>
+			<button type="button" onclick="exportConversion();">Exporter conversion</button>
+			<table>
+				<tbody id="proximity-color-group-list">
+				</tbody>
+			</table>
 		</div>
 		<table>
 			<tbody id="color-tbody">
