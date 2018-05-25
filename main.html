@@ -58,8 +58,8 @@ td {width: 60px; height: 25px; }
 		function supprimerLigne(element) {
 			$(element).parents('tr').first().remove();
 		}
-		function getColorLineHtmlTag(colorBefore,colorAfter,distanceToRef) {
-			return '<tr><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before-code" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before\'));"/></td><td><input type="color" class="color-input-before" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before-code\'));"/></td><td><input type="color" class="color-input-after" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after-code\'));"/></td><td><input type="text" class="color-input-after-code" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after\'));"/></td><td class="distanceToRef">'+distanceToRef+'</td></tr>';
+		function getColorLineHtmlTag(colorBefore,colorAfter,distanceToRef,index) {
+			return '<tr><td>'+index+'</td><td><button type="button" onclick="supprimerLigne(this);">Supprimer</button></td><td><input type="text" class="color-input-before-code" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before\'));"/></td><td><input type="color" class="color-input-before" value="'+colorBefore+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-before-code\'));"/></td><td><input type="color" class="color-input-after" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after-code\'));"/></td><td><input type="text" class="color-input-after-code" value="'+colorAfter+'" onchange="copyValTo(this,$(this).parents(\'tr\').find(\'td input.color-input-after\'));"/></td><td class="distanceToRef">'+distanceToRef+'</td></tr>';
 		}
 		function ajouterCouleurs(){
 			var colors = $("#new-colors-input").val().split("\n");
@@ -69,7 +69,7 @@ td {width: 60px; height: 25px; }
 				var color = colors[colorIndex];
 				color = color.trim();
 				if(color) {
-					tbody.append(getColorLineHtmlTag(color,color,""));
+					tbody.append(getColorLineHtmlTag(color,color,"",colorIndex));
 				}
 			}
 		}
@@ -89,7 +89,7 @@ td {width: 60px; height: 25px; }
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
 				if(color) {
-					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef));
+					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef,colorIndex));
 				}
 			}
 		}
@@ -115,7 +115,7 @@ td {width: 60px; height: 25px; }
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
 				if(color) {
-					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef));
+					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef,colorIndex));
 				}
 			}
 		}
@@ -222,8 +222,6 @@ td {width: 60px; height: 25px; }
 					var distance = colorDistanceData["grid"][color1][color2];
 					//console.log("distance(" + color1 + "," + color2 + ") : " + distance);
 					if( 0 < distance && distance <= seuil ) {
-						//tbodyGroupListElement.append(getColorLineHtmlTag(color1,color2,distance));
-						
 						//console.log('colorGroups : ',colorGroups);
 						var found = false;
 						for( var colorGroupIndex in colorGroups ) {
@@ -324,7 +322,7 @@ td {width: 60px; height: 25px; }
 						if( !remplacementColor ) {
 							remplacementColor = colorInSet;
 						}
-						ulGroupElement.append('<li><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
+						ulGroupElement.append('<li><button type="button" onclick="$(this).parent().remove();" >Supprimer</button><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
 					}
 					tbodyGroupListElement.append(
 						$('<tr/>')
