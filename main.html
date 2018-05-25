@@ -164,12 +164,16 @@ td {width: 60px; height: 25px; }
 		function exportTooCloseColors() {
 			var text = "";
 			var tbodyGroupListElement = $('#proximity-color-group-list');
+			var colorAfter = $(element).find("input.color-input-after").val().toUpperCase();
 			tbodyGroupListElement.find("tr").each(function(index, element){
 				var replacedColorArray = [];
 				$(element).find("li input.color-input-before").each(function(index, element){
-					replacedColorArray.push($(element).val());
+					var colorBefore = $(element).val().toUpperCase();
+					if( colorAfter != colorBefore ) {
+						replacedColorArray.push(colorBefore);
+					}
 				});
-				text += replacedColorArray.join('|') + ' => ' + $(element).find("input.color-input-after").val() + '\n';
+				text += replacedColorArray.join('|') + ' => ' + colorAfter + '\n';
 			});
 			$("#export-conversion").val(text);
 		}
@@ -200,6 +204,8 @@ td {width: 60px; height: 25px; }
 				var colorGroups = [];
 				var classedColorSet = new Set();
 				
+				// Build groups as first pass
+				console.log("-----------------Start building groups as first pass");
 				for( var colorDistanceIndex in colorDistanceList ) {
 					var keys = colorDistanceList[colorDistanceIndex];
 					// console.log("keys : " + keys);
@@ -207,44 +213,44 @@ td {width: 60px; height: 25px; }
 					// console.log("keys : " + keys);
 					var color1 = keys[0];
 					var color2 = keys[1];
-					console.log("====================================== Start couple(color1 : " + color1 + " ; color2 : " + color2 + ")");
+					//console.log("====================================== Start couple(color1 : " + color1 + " ; color2 : " + color2 + ")");
 					//console.log("color1 : " + color1);
 					//console.log("color2 : " + color2);
 					// console.log(colorDistanceData["grid"]);
 					// console.log(colorDistanceData["grid"][color1]);
 					// console.log(colorDistanceData["grid"][color1][color2]);
 					var distance = colorDistanceData["grid"][color1][color2];
-					console.log("distance(" + color1 + "," + color2 + ") : " + distance);
+					//console.log("distance(" + color1 + "," + color2 + ") : " + distance);
 					if( 0 < distance && distance <= seuil ) {
 						//tbodyGroupListElement.append(getColorLineHtmlTag(color1,color2,distance));
 						
-						console.log('colorGroups : ',colorGroups);
+						//console.log('colorGroups : ',colorGroups);
 						var found = false;
 						for( var colorGroupIndex in colorGroups ) {
 							var colorGroupSet = colorGroups[colorGroupIndex];
-							console.log("colorGroupSet : ",colorGroupSet);
+							//console.log("colorGroupSet : ",colorGroupSet);
 							if( colorGroupSet.has(color1) || colorGroupSet.has(color2) ) {
 								found = true;
-								console.log("found(" + color1 + "," + color2 + ") in ",colorGroupSet);
+								//console.log("found(" + color1 + "," + color2 + ") in ",colorGroupSet);
 								
 								var isCloseEnoughFromEveryOtherColorInGroup = true;
 								for( var colorInSet of colorGroupSet ) {
 									var distanceToColorInSet = colorDistanceData["grid"][color1][colorInSet];
-									console.log("color1Loop distanceToColorInSet(" + color1 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
+									//console.log("color1Loop distanceToColorInSet(" + color1 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
 									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 <= distanceToColorInSet && distanceToColorInSet <= seuil );
-									console.log("color1Loop isCloseEnoughFromEveryOtherColorInGroup(" + color1 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
+									//console.log("color1Loop isCloseEnoughFromEveryOtherColorInGroup(" + color1 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 									if(!isCloseEnoughFromEveryOtherColorInGroup){break;}
 								}
 								for( var colorInSet of colorGroupSet ) {
 									var distanceToColorInSet = colorDistanceData["grid"][color2][colorInSet];
-									console.log("color2Loop distanceToColorInSet(" + color2 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
+									//console.log("color2Loop distanceToColorInSet(" + color2 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
 									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 <= distanceToColorInSet && distanceToColorInSet <= seuil );
-									console.log("color2Loop isCloseEnoughFromEveryOtherColorInGroup(" + color2 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
+									//console.log("color2Loop isCloseEnoughFromEveryOtherColorInGroup(" + color2 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 									if(!isCloseEnoughFromEveryOtherColorInGroup){break;}
 								}
-								console.log("final isCloseEnoughFromEveryOtherColorInGroup (" + color1 + "," + color2 + ") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
+								//console.log("final isCloseEnoughFromEveryOtherColorInGroup (" + color1 + "," + color2 + ") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 								if(isCloseEnoughFromEveryOtherColorInGroup) {
-									console.log("classedColorSet check : ",classedColorSet);
+									//console.log("classedColorSet check : ",classedColorSet);
 									if(!classedColorSet.has(color1)) {
 										colorGroupSet.add(color1);
 										classedColorSet.add(color1);
@@ -264,6 +270,52 @@ td {width: 60px; height: 25px; }
 						}
 					}
 				}
+				
+				// Merge groups
+				console.log("-----------------Start merging");
+				console.log('colorGroups : ',colorGroups);
+				var noMergeDone = true;
+				var safeCounter = 0;
+				var safeCounterLimit = colorGroups.length;
+				do{
+					var mergedGroups = [];
+					var mergedGroupIndexes = new Set();
+					for( var colorGroupToMergeIndex = 0 ; colorGroupToMergeIndex < colorGroups.length ; colorGroupToMergeIndex++ ) {
+						if(!mergedGroupIndexes.has(colorGroupToMergeIndex)) {
+							mergedGroupIndexes.add(colorGroupToMergeIndex);
+							var colorGroupSetToMerge = colorGroups[colorGroupToMergeIndex];
+							var newMergedSet = new Set(colorGroupSetToMerge);
+							for( var colorGroupIndex = colorGroupToMergeIndex + 1 ; colorGroupIndex < colorGroups.length ; colorGroupIndex++ ) {
+								if(!mergedGroupIndexes.has(colorGroupIndex)) {
+									var colorGroupSet = colorGroups[colorGroupIndex];
+									var canMerge = true;
+									for( var colorInSetToMerge of newMergedSet ) {
+										for( var colorInSet of colorGroupSet ) {
+											var distanceToColorInSet = colorDistanceData["grid"][colorInSetToMerge][colorInSet];
+											canMerge = canMerge && ( distanceToColorInSet <= seuil );
+											if(!canMerge){break;}
+										}
+									}
+									if(canMerge) {
+										mergedGroupIndexes.add(colorGroupIndex);
+										for (var newColor of colorGroupSet) {
+											newMergedSet.add(newColor);
+										}
+									}
+								}
+							}
+							mergedGroups.push(newMergedSet);
+						}
+					}
+					console.log("colorGroups.length : ",colorGroups.length);
+					console.log("mergedGroups.length : ",mergedGroups.length);
+					noMergeDone = (colorGroups.length == mergedGroups.length);
+					colorGroups = mergedGroups;
+					
+					safeCounter++;
+				} while(!noMergeDone && safeCounter < safeCounterLimit);
+				
+				// Display groups
 				for( var colorGroupIndex in colorGroups ) {
 					var colorGroupSet = colorGroups[colorGroupIndex];
 					var ulGroupElement = $('<ul/>');
