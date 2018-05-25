@@ -93,6 +93,21 @@ td {width: 60px; height: 25px; }
 				}
 			}
 		}
+		function buildConvertion() {
+			var sourceColor = w3color($("#color-sorting-lab").val());
+			var targetColor = w3color($("#color-convert-target").val());
+			var transformVector = {};
+			transformVector.hue = targetColor.hue - sourceColor.hue;
+			transformVector.sat = targetColor.sat - sourceColor.sat;
+			transformVector.lightness = targetColor.lightness - sourceColor.lightness;
+			$("#color-tbody tr").each(function(index, element){
+				var colorBefore = w3color($(element).find(".color-input-before").val());
+				colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
+				colorBefore.sat = Math.max(Math.min(colorBefore.sat + transformVector.sat, 1.0), 0.0);
+				colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
+				$(element).find(".color-input-after, .color-input-after-code").val(w3color(colorBefore.toHslString()).toHexString());
+			});
+		}
 		function sortingColorsCustom(){
 			var colors = getColors();
 			var referenceW3Color = w3color($("#color-sorting-custom").val());
@@ -164,8 +179,8 @@ td {width: 60px; height: 25px; }
 		function exportTooCloseColors() {
 			var text = "";
 			var tbodyGroupListElement = $('#proximity-color-group-list');
-			var colorAfter = $(element).find("input.color-input-after").val().toUpperCase();
 			tbodyGroupListElement.find("tr").each(function(index, element){
+				var colorAfter = $(element).find("input.color-input-after").val().toUpperCase();
 				var replacedColorArray = [];
 				$(element).find("li input.color-input-before").each(function(index, element){
 					var colorBefore = $(element).val().toUpperCase();
@@ -180,6 +195,11 @@ td {width: 60px; height: 25px; }
 		function copyValTo(element, otherSelector) {
 			$(otherSelector).val($(element).val());
 		}
+		function displayW3colorInfoTo(element, displayTagElement) {
+			var color = w3color($(element).val());
+			console.log(color);
+			//$(displayTagElement).text(color);
+		}
 		function displayProximityColorGroupList() {
 			var colors = getColors();
 			colors = colors.sort(function(str1, str2){
@@ -189,7 +209,7 @@ td {width: 60px; height: 25px; }
 			console.log(colorDistanceData);
 			var seuil = parseFloat( $('#color-matrix-seuil').val() );
 			
-			{
+			if($("#color-proximity-group-build-checkbox").prop("checked")) {
 				var colorDistanceList = [];
 				for(var key in colorDistanceData["list"]) {
 					colorDistanceList.push(key);
@@ -337,7 +357,9 @@ td {width: 60px; height: 25px; }
 				}
 			}
 			
-			displayProximityMatrix(colors, colorDistanceData, seuil);
+			if($("#color-matrix-build-checkbox").prop("checked")) {
+				displayProximityMatrix(colors, colorDistanceData, seuil);
+			}
 		}
 		function displayProximityMatrix(colors, colorDistanceData, seuil){
 			var tbodyElement = $('#proximity-color-distance-matrix');
@@ -378,9 +400,13 @@ td {width: 60px; height: 25px; }
 			<button type="button" onclick="ajouterCouleurs();">Ajouter couleur(s)</button>
 		</div>
 		<div>
-			<input id="color-sorting-lab-code" onchange="copyValTo(this,'#color-sorting-lab');" type="text"/>
-			<input id="color-sorting-lab" onchange="copyValTo(this,'#color-sorting-lab-code');" type="color"/>
+			<input id="color-sorting-lab-code" onchange="copyValTo(this,'#color-sorting-lab');displayW3colorInfoTo(this,$(this).parent().find('.display-w3color-info'));" type="text"/>
+			<input id="color-sorting-lab" onchange="copyValTo(this,'#color-sorting-lab-code');displayW3colorInfoTo(this,$(this).parent().find('.display-w3color-info'));" type="color"/>
 			<button type="button" onclick="sortingColorsLab();">Trier couleur(s) Lab</button>
+			<span style="display:none;" class='display-w3color-info'></span>
+			<input id="color-convert-target-code" onchange="copyValTo(this,'#color-convert-target');" type="text"/>
+			<input id="color-convert-target" onchange="copyValTo(this,'#color-convert-target-code');" type="color"/>
+			<button type="button" onclick="buildConvertion();">Créer conversion</button>
 		</div>
 		<div>
 			<input id="color-sorting-custom-code" onchange="copyValTo(this,'#color-sorting-custom');" type="text"/>
@@ -394,7 +420,9 @@ td {width: 60px; height: 25px; }
 		</div>
 		<div>
 			<label for="color-matrix-seuil" >Seuil</label><input id="color-matrix-seuil" type="text" value="2.3"/>
-			<button type="button" onclick="displayProximityColorGroupList();">Build distance Matrix</button>
+			<label for="color-matrix-build-checkbox" >Distance Matrix</label><input id="color-matrix-build-checkbox" type="checkbox"/>
+			<label for="color-proximity-group-build-checkbox" >Proximity groups</label><input id="color-proximity-group-build-checkbox" type="checkbox" checked="checked"/>
+			<button type="button" onclick="displayProximityColorGroupList();">Calculate distances and Build</button>
 			<div>
 				<button type="button" onclick="$(this).parent().find('table').hide();$(this).parent().find('button').show();$(this).hide();">Hide color matrix</button>
 				<button type="button" onclick="$(this).parent().find('table').show();$(this).parent().find('button').show();$(this).hide();">Show color matrix</button>
