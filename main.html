@@ -132,6 +132,7 @@ td {width: 60px; height: 25px; }
 					if(!(color2.before in distanceGrid)) {
 						distanceGrid[color2.before] = {};
 					}
+					$('#processing-progress').text(colorIndex1 + '/' + colorIndex2 + '/' + colors.length );
 					var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
 					distanceGrid[color1.before][color2.before] = distance;
 					distanceGrid[color2.before][color1.before] = distance;
@@ -197,6 +198,7 @@ td {width: 60px; height: 25px; }
 				var tbodyGroupListElement = $('#proximity-color-group-list');
 				tbodyGroupListElement.empty();
 				var colorGroups = [];
+				var classedColorSet = new Set();
 				
 				for( var colorDistanceIndex in colorDistanceList ) {
 					var keys = colorDistanceList[colorDistanceIndex];
@@ -205,40 +207,59 @@ td {width: 60px; height: 25px; }
 					// console.log("keys : " + keys);
 					var color1 = keys[0];
 					var color2 = keys[1];
-					// console.log("color1 : " + color1);
-					// console.log("color2 : " + color2);
+					console.log("====================================== Start couple(color1 : " + color1 + " ; color2 : " + color2 + ")");
+					//console.log("color1 : " + color1);
+					//console.log("color2 : " + color2);
 					// console.log(colorDistanceData["grid"]);
 					// console.log(colorDistanceData["grid"][color1]);
 					// console.log(colorDistanceData["grid"][color1][color2]);
 					var distance = colorDistanceData["grid"][color1][color2];
+					console.log("distance(" + color1 + "," + color2 + ") : " + distance);
 					if( 0 < distance && distance <= seuil ) {
 						//tbodyGroupListElement.append(getColorLineHtmlTag(color1,color2,distance));
 						
+						console.log('colorGroups : ',colorGroups);
 						var found = false;
 						for( var colorGroupIndex in colorGroups ) {
 							var colorGroupSet = colorGroups[colorGroupIndex];
+							console.log("colorGroupSet : ",colorGroupSet);
 							if( colorGroupSet.has(color1) || colorGroupSet.has(color2) ) {
 								found = true;
+								console.log("found(" + color1 + "," + color2 + ") in ",colorGroupSet);
 								
 								var isCloseEnoughFromEveryOtherColorInGroup = true;
 								for( var colorInSet of colorGroupSet ) {
 									var distanceToColorInSet = colorDistanceData["grid"][color1][colorInSet];
-									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 < distanceToColorInSet && distanceToColorInSet <= seuil );
+									console.log("color1Loop distanceToColorInSet(" + color1 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
+									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 <= distanceToColorInSet && distanceToColorInSet <= seuil );
+									console.log("color1Loop isCloseEnoughFromEveryOtherColorInGroup(" + color1 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 									if(!isCloseEnoughFromEveryOtherColorInGroup){break;}
 								}
 								for( var colorInSet of colorGroupSet ) {
 									var distanceToColorInSet = colorDistanceData["grid"][color2][colorInSet];
-									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 < distanceToColorInSet && distanceToColorInSet <= seuil );
+									console.log("color2Loop distanceToColorInSet(" + color2 + " to colorInSet:"+colorInSet+") is ",distanceToColorInSet);
+									isCloseEnoughFromEveryOtherColorInGroup = isCloseEnoughFromEveryOtherColorInGroup && ( 0 <= distanceToColorInSet && distanceToColorInSet <= seuil );
+									console.log("color2Loop isCloseEnoughFromEveryOtherColorInGroup(" + color2 + " to colorInSet:"+colorInSet+") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 									if(!isCloseEnoughFromEveryOtherColorInGroup){break;}
 								}
+								console.log("final isCloseEnoughFromEveryOtherColorInGroup (" + color1 + "," + color2 + ") is ",isCloseEnoughFromEveryOtherColorInGroup," for ",colorGroupSet);
 								if(isCloseEnoughFromEveryOtherColorInGroup) {
-									colorGroupSet.add(color1);
-									colorGroupSet.add(color2);
+									console.log("classedColorSet check : ",classedColorSet);
+									if(!classedColorSet.has(color1)) {
+										colorGroupSet.add(color1);
+										classedColorSet.add(color1);
+									}
+									if(!classedColorSet.has(color2)) {
+										colorGroupSet.add(color2);
+										classedColorSet.add(color2);
+									}
 								}
 								break;
 							}
 						}
 						if(!found) {
+							classedColorSet.add(color1);
+							classedColorSet.add(color2);
 							colorGroups.push(new Set([color1,color2]));
 						}
 					}
@@ -300,6 +321,7 @@ td {width: 60px; height: 25px; }
 			}
 		}
 		</script>
+		<span id='processing-progress'></span>
 		<div>
 			<textarea id="new-colors-input" ></textarea>
 			<button type="button" onclick="exporterCouleurs();">Exporter couleur(s) before</button>
@@ -321,16 +343,24 @@ td {width: 60px; height: 25px; }
 			<button type="button" onclick="exportConversion();">Exporter conversion</button>
 		</div>
 		<div>
-			<label for="color-matrix-seuil" >Seuil</label><input id="color-matrix-seuil" type="text" value="2"/>
+			<label for="color-matrix-seuil" >Seuil</label><input id="color-matrix-seuil" type="text" value="2.3"/>
 			<button type="button" onclick="displayProximityColorGroupList();">Build distance Matrix</button>
-			<table>
-				<tbody id="proximity-color-distance-matrix" class="distance-matrix">
-				</tbody>
-			</table>
-			<table>
-				<tbody id="proximity-color-group-list">
-				</tbody>
-			</table>
+			<div>
+				<button type="button" onclick="$(this).parent().find('table').hide();$(this).parent().find('button').show();$(this).hide();">Hide color matrix</button>
+				<button type="button" onclick="$(this).parent().find('table').show();$(this).parent().find('button').show();$(this).hide();">Show color matrix</button>
+				<table>
+					<tbody id="proximity-color-distance-matrix" class="distance-matrix">
+					</tbody>
+				</table>
+			</div>
+			<div>
+				<button type="button" onclick="$(this).parent().find('table').hide();$(this).parent().find('button').show();$(this).hide();">Hide color groups</button>
+				<button type="button" onclick="$(this).parent().find('table').show();$(this).parent().find('button').show();$(this).hide();">Show color groups</button>
+				<table>
+					<tbody id="proximity-color-group-list">
+					</tbody>
+				</table>
+			</div>
 		</div>
 		<table>
 			<tbody id="color-tbody">
