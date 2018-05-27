@@ -71,34 +71,6 @@ td {width: 60px; height: 25px; }
 				}
 			}
 		}
-		function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConvertionOnlyInExistingColors) {
-			var transformVector = {};
-			transformVector.hue = targetW3Color.hue - sourceW3Color.hue;
-			transformVector.sat = targetW3Color.sat - sourceW3Color.sat;
-			transformVector.lightness = targetW3Color.lightness - sourceW3Color.lightness;
-			var conversionMap = {};
-			for( var colorIndex in colors ) {
-				var colorBeforeCode = colors[colorIndex].before;
-				var colorBefore = w3color(colorBeforeCode);
-				colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
-				colorBefore.sat = Math.max(Math.min(colorBefore.sat + transformVector.sat, 1.0), 0.0);
-				colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
-				var newColorAfter = w3color(colorBefore.toHslString());
-				if( findConvertionOnlyInExistingColors ) {
-					for( var colorIndex in colors ) {
-						var color = colors[colorIndex];
-						color.distanceToRef = w3colorDistance(w3color(color.before), newColorAfter);
-						//console.log(color.distanceToRef);
-					}
-					var sortedColors = colors.sort(function(a, b){
-						return (a.distanceToRef - b.distanceToRef);
-					});
-					newColorAfter = w3color(sortedColors[0].before);
-				}
-				conversionMap[colorBeforeCode] = newColorAfter.toHexString());
-			}
-			return conversionMap;
-		}
 		function buildConvertion(findConvertionOnlyInExistingColors) {
 			var colors = getColors();
 			var sourceColor = w3color($("#color-sorting-lab").val());
@@ -108,32 +80,6 @@ td {width: 60px; height: 25px; }
 				var colorBeforeCode = $(element).find(".color-input-before").val();
 				$(element).find(".color-input-after, .color-input-after-code").val(conversionMap[colorBeforeCode]);
 			});
-		}
-		function sortingColorsCustom(){
-			var colors = getColors();
-			var referenceW3Color = w3color($("#color-sorting-custom").val());
-			var refColorObject = referenceW3Color.toHsl();
-			for( var colorIndex in colors ) {
-				var color = colors[colorIndex];
-				var colorObject = w3color(color.before).toHsl();
-				var hDist = Math.abs(colorObject.h-refColorObject.h);
-				if( hDist > 180 ) {
-					hDist = 360 - hDist;
-				}
-				color.distanceToRef = Math.pow( Math.pow(hDist,2) + Math.pow((colorObject.s - refColorObject.s)*100,2) + Math.pow((colorObject.l - refColorObject.l)*100,2),0.5);
-				console.log(color.distanceToRef);
-			}
-			colors = colors.sort(function(a, b){
-				return (a.distanceToRef - b.distanceToRef);
-			});
-			var tbody = $("#color-tbody");
-			tbody.empty();
-			for( var colorIndex in colors ) {
-				var color = colors[colorIndex];
-				if(color) {
-					tbody.append(getColorLineHtmlTag(color.before,color.after,color.distanceToRef,colorIndex));
-				}
-			}
 		}
 		function buildDistanceLabMatrix(colors){
 			var distanceGrid = {};
@@ -409,11 +355,6 @@ td {width: 60px; height: 25px; }
 			<input id="color-convert-target" onchange="copyValTo(this,'#color-convert-target-code');" type="color"/>
 			<label for="color-convert-existing-checkbox" >Only with existing colors</label><input id="color-convert-existing-checkbox" type="checkbox"/>
 			<button type="button" onclick="buildConvertion($('#color-convert-existing-checkbox').prop('checked'));">Créer conversion</button>
-		</div>
-		<div>
-			<input id="color-sorting-custom-code" onchange="copyValTo(this,'#color-sorting-custom');" type="text"/>
-			<input id="color-sorting-custom" onchange="copyValTo(this,'#color-sorting-code-custom');" type="color"/>
-			<button type="button" onclick="sortingColorsCustom();">Trier couleur(s) Custom</button>
 		</div>
 		<div>
 			<textarea id="export-conversion" ></textarea>
