@@ -1,8 +1,12 @@
 <!doctype html>
 <html>
 	<head>
-		<script src='w3color.js'></script>
 		<meta charset="utf-8"/>
+		<script src="jquery-3.3.1.js"></script>
+		<script src="labColor.js" ></script>
+		<script src="diff.js" ></script>
+		<script src='w3color.js'></script>
+		<script src="customColorOperations.js" ></script>
 		<style>
 td, tr, table {border: solid 1px black;}
 td {width: 60px; height: 25px; }
@@ -11,9 +15,6 @@ td {width: 60px; height: 25px; }
 		<title>Couleurs</title>
 	</head>
 	<body>
-		<script src="jquery-3.3.1.js"></script>
-		<script src="labColor.js" ></script>
-		<script src="diff.js" ></script>
 		<script>
 		Number.prototype.toFixedDown = function(digits) {
 			var re = new RegExp("(\\d+\\.\\d{" + digits + "})(\\d)"),
@@ -29,22 +30,6 @@ td {width: 60px; height: 25px; }
 				});
 			});
 			return colors;
-		}
-		function w3colorDistance(colorA, colorB) {
-			var aArrayLab = RGBtoLAB(colorA.red, colorA.green, colorA.blue);
-			var bArrayLab = RGBtoLAB(colorB.red, colorB.green, colorB.blue);
-			return ciede2000(
-				{
-					L:aArrayLab[0],
-					a:aArrayLab[1],
-					b:aArrayLab[2]
-				},
-				{
-					L:bArrayLab[0],
-					a:bArrayLab[1],
-					b:bArrayLab[2]
-				}
-			);
 		}
 		function adaptColorBackground(jQueryElement,value){
 			console.log(jQueryElement);
@@ -76,14 +61,7 @@ td {width: 60px; height: 25px; }
 		function sortingColorsLab(){
 			var colors = getColors();
 			var referenceW3Color = w3color($("#color-sorting-lab").val());
-			for( var colorIndex in colors ) {
-				var color = colors[colorIndex];
-				color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
-				console.log(color.distanceToRef);
-			}
-			colors = colors.sort(function(a, b){
-				return (a.distanceToRef - b.distanceToRef);
-			});
+			colors = sortColorsByDistanceToRef(colors, referenceW3Color);
 			var tbody = $("#color-tbody");
 			tbody.empty();
 			for( var colorIndex in colors ) {
@@ -93,16 +71,15 @@ td {width: 60px; height: 25px; }
 				}
 			}
 		}
-		function buildConvertion(findConvertionOnlyInExistingColors) {
-			var sourceColor = w3color($("#color-sorting-lab").val());
-			var targetColor = w3color($("#color-convert-target").val());
+		function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConvertionOnlyInExistingColors) {
 			var transformVector = {};
-			transformVector.hue = targetColor.hue - sourceColor.hue;
-			transformVector.sat = targetColor.sat - sourceColor.sat;
-			transformVector.lightness = targetColor.lightness - sourceColor.lightness;
-			var colors = getColors();
-			$("#color-tbody tr").each(function(index, element){
-				var colorBefore = w3color($(element).find(".color-input-before").val());
+			transformVector.hue = targetW3Color.hue - sourceW3Color.hue;
+			transformVector.sat = targetW3Color.sat - sourceW3Color.sat;
+			transformVector.lightness = targetW3Color.lightness - sourceW3Color.lightness;
+			var conversionMap = {};
+			for( var colorIndex in colors ) {
+				var colorBeforeCode = colors[colorIndex].before;
+				var colorBefore = w3color(colorBeforeCode);
 				colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
 				colorBefore.sat = Math.max(Math.min(colorBefore.sat + transformVector.sat, 1.0), 0.0);
 				colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
@@ -113,12 +90,23 @@ td {width: 60px; height: 25px; }
 						color.distanceToRef = w3colorDistance(w3color(color.before), newColorAfter);
 						//console.log(color.distanceToRef);
 					}
-					colors = colors.sort(function(a, b){
+					var sortedColors = colors.sort(function(a, b){
 						return (a.distanceToRef - b.distanceToRef);
 					});
-					newColorAfter = w3color(colors[0].before);
+					newColorAfter = w3color(sortedColors[0].before);
 				}
-				$(element).find(".color-input-after, .color-input-after-code").val(newColorAfter.toHexString());
+				conversionMap[colorBeforeCode] = newColorAfter.toHexString());
+			}
+			return conversionMap;
+		}
+		function buildConvertion(findConvertionOnlyInExistingColors) {
+			var colors = getColors();
+			var sourceColor = w3color($("#color-sorting-lab").val());
+			var targetColor = w3color($("#color-convert-target").val());
+			conversionMap = buildColorsConvertionMap(colors, sourceColor, targetColor, findConvertionOnlyInExistingColors);
+			$("#color-tbody tr").each(function(index, element){
+				var colorBeforeCode = $(element).find(".color-input-before").val();
+				$(element).find(".color-input-after, .color-input-after-code").val(conversionMap[colorBeforeCode]);
 			});
 		}
 		function sortingColorsCustom(){
@@ -160,7 +148,7 @@ td {width: 60px; height: 25px; }
 					if(!(color2.before in distanceGrid)) {
 						distanceGrid[color2.before] = {};
 					}
-					$('#processing-progress').text(colorIndex1 + '/' + colorIndex2 + '/' + colors.length );
+					//$('#processing-progress').text(colorIndex1 + '/' + colorIndex2 + '/' + colors.length );
 					var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
 					distanceGrid[color1.before][color2.before] = distance;
 					distanceGrid[color2.before][color1.before] = distance;
