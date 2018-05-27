@@ -438,16 +438,16 @@ td {width: 60px; height: 25px; }
 			<label for="color-proximity-group-build-checkbox" >Proximity groups</label><input id="color-proximity-group-build-checkbox" type="checkbox" checked="checked"/>
 			<button type="button" onclick="displayProximityColorGroupList();">Calculate distances and Build</button>
 			<div>
-				<button type="button" onclick="$(this).parent().find('table').hide();$(this).parent().find('button').show();$(this).hide();">Hide color matrix</button>
-				<button type="button" onclick="$(this).parent().find('table').show();$(this).parent().find('button').show();$(this).hide();">Show color matrix</button>
+				<button type="button" onclick="$(this).parent().children('table').hide();$(this).parent().children('button').show();$(this).hide();">Hide color matrix</button>
+				<button type="button" onclick="$(this).parent().children('table').show();$(this).parent().children('button').show();$(this).hide();">Show color matrix</button>
 				<table>
 					<tbody id="proximity-color-distance-matrix" class="distance-matrix">
 					</tbody>
 				</table>
 			</div>
 			<div>
-				<button type="button" onclick="$(this).parent().find('table').hide();$(this).parent().find('button').show();$(this).hide();">Hide color groups</button>
-				<button type="button" onclick="$(this).parent().find('table').show();$(this).parent().find('button').show();$(this).hide();">Show color groups</button>
+				<button type="button" onclick="$(this).parent().children('table').hide();$(this).parent().children('button').show();$(this).hide();">Hide color groups</button>
+				<button type="button" onclick="$(this).parent().children('table').show();$(this).parent().children('button').show();$(this).hide();">Show color groups</button>
 				<table>
 					<tbody id="proximity-color-group-list">
 					</tbody>
