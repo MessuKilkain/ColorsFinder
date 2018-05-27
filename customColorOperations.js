@@ -20,7 +20,6 @@ function sortColorsByDistanceToRef(colors, referenceW3Color) {
 	for( var colorIndex in colors ) {
 		var color = colors[colorIndex];
 		color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
-		//console.log(color.distanceToRef);
 	}
 	colors = colors.sort(function(a, b){
 		return (a.distanceToRef - b.distanceToRef);
@@ -34,22 +33,16 @@ function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConv
 	transformVector.sat = targetW3Color.sat - sourceW3Color.sat;
 	transformVector.lightness = targetW3Color.lightness - sourceW3Color.lightness;
 	var conversionMap = {};
-	for( var colorIndex in colors ) {
-		var colorBeforeCode = colors[colorIndex].before;
+	var colorCompleteList = colors.slice();
+	for( var colorMainLoopIndex in colorCompleteList ) {
+		var colorBeforeCode = colorCompleteList[colorMainLoopIndex].before;
 		var colorBefore = w3color(colorBeforeCode);
 		colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
 		colorBefore.sat = Math.max(Math.min(colorBefore.sat + transformVector.sat, 1.0), 0.0);
 		colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
 		var newColorAfter = w3color(colorBefore.toHslString());
 		if( findConvertionOnlyInExistingColors ) {
-			for( var colorIndex in colors ) {
-				var color = colors[colorIndex];
-				color.distanceToRef = w3colorDistance(w3color(color.before), newColorAfter);
-				//console.log(color.distanceToRef);
-			}
-			var sortedColors = colors.sort(function(a, b){
-				return (a.distanceToRef - b.distanceToRef);
-			});
+			var sortedColors = sortColorsByDistanceToRef(colors, newColorAfter);
 			newColorAfter = w3color(sortedColors[0].before);
 		}
 		conversionMap[colorBeforeCode] = newColorAfter.toHexString();
