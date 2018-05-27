@@ -93,19 +93,32 @@ td {width: 60px; height: 25px; }
 				}
 			}
 		}
-		function buildConvertion() {
+		function buildConvertion(findConvertionOnlyInExistingColors) {
 			var sourceColor = w3color($("#color-sorting-lab").val());
 			var targetColor = w3color($("#color-convert-target").val());
 			var transformVector = {};
 			transformVector.hue = targetColor.hue - sourceColor.hue;
 			transformVector.sat = targetColor.sat - sourceColor.sat;
 			transformVector.lightness = targetColor.lightness - sourceColor.lightness;
+			var colors = getColors();
 			$("#color-tbody tr").each(function(index, element){
 				var colorBefore = w3color($(element).find(".color-input-before").val());
 				colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
 				colorBefore.sat = Math.max(Math.min(colorBefore.sat + transformVector.sat, 1.0), 0.0);
 				colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
-				$(element).find(".color-input-after, .color-input-after-code").val(w3color(colorBefore.toHslString()).toHexString());
+				var newColorAfter = w3color(colorBefore.toHslString());
+				if( findConvertionOnlyInExistingColors ) {
+					for( var colorIndex in colors ) {
+						var color = colors[colorIndex];
+						color.distanceToRef = w3colorDistance(w3color(color.before), newColorAfter);
+						//console.log(color.distanceToRef);
+					}
+					colors = colors.sort(function(a, b){
+						return (a.distanceToRef - b.distanceToRef);
+					});
+					newColorAfter = w3color(colors[0].before);
+				}
+				$(element).find(".color-input-after, .color-input-after-code").val(newColorAfter.toHexString());
 			});
 		}
 		function sortingColorsCustom(){
@@ -406,7 +419,8 @@ td {width: 60px; height: 25px; }
 			<span style="display:none;" class='display-w3color-info'></span>
 			<input id="color-convert-target-code" onchange="copyValTo(this,'#color-convert-target');" type="text"/>
 			<input id="color-convert-target" onchange="copyValTo(this,'#color-convert-target-code');" type="color"/>
-			<button type="button" onclick="buildConvertion();">Créer conversion</button>
+			<label for="color-convert-existing-checkbox" >Only with existing colors</label><input id="color-convert-existing-checkbox" type="checkbox"/>
+			<button type="button" onclick="buildConvertion($('#color-convert-existing-checkbox').prop('checked'));">Créer conversion</button>
 		</div>
 		<div>
 			<input id="color-sorting-custom-code" onchange="copyValTo(this,'#color-sorting-custom');" type="text"/>
