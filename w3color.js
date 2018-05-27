@@ -1,4 +1,5 @@
 /* w3color.js ver.1.18 by w3schools.com (Do not remove this line)*/
+var w3colorTemp;
 (function () {
 function w3color(color, elmnt) {
   if (!(this instanceof w3color)) { return new w3color(color, elmnt); }
@@ -630,10 +631,13 @@ function w3trim(x) {
 function isHex(x) {
   return ('0123456789ABCDEFabcdef'.indexOf(x) > -1);
 }
-window.w3color = w3color;
+if (typeof window !== 'undefined') {
+	window.w3color = w3color;
+}
+w3colorTemp = w3color;
 
 })();
-
+var w3color = w3colorTemp;
 function w3SetColorsByAttribute() {
   var z, i, att;
   z = document.getElementsByTagName("*");

@@ -16,6 +16,19 @@ td {width: 60px; height: 25px; }
 	</head>
 	<body>
 		<script>
+		function useAsynchronousOperation(functionName, parameters, callback) {
+			var myWorker = new Worker('asynchronousOperations.js');
+			myWorker.onmessage = function(oEvent) {
+				var data = oEvent.data;
+				if("progress" in data) {
+					$("#processing-progress").text(data["progress"]);
+				}
+				if("result" in data) {
+					callback(data["result"]);
+				}
+			};
+			myWorker.postMessage({"functionName":functionName,"parameters":parameters});
+		};
 		Number.prototype.toFixedDown = function(digits) {
 			var re = new RegExp("(\\d+\\.\\d{" + digits + "})(\\d)"),
 				m = this.toString().match(re);
@@ -81,28 +94,6 @@ td {width: 60px; height: 25px; }
 				$(element).find(".color-input-after, .color-input-after-code").val(conversionMap[colorBeforeCode]);
 			});
 		}
-		function buildDistanceLabMatrix(colors){
-			var distanceGrid = {};
-			var distanceList = [];
-			for (var colorIndex1 = 0; colorIndex1 < colors.length; colorIndex1++) {
-				var color1 = colors[colorIndex1];
-				if(!(color1.before in distanceGrid)) {
-					distanceGrid[color1.before] = {};
-				}
-				for (var colorIndex2 = colorIndex1; colorIndex2 < colors.length; colorIndex2++) {
-					var color2 = colors[colorIndex2];
-					if(!(color2.before in distanceGrid)) {
-						distanceGrid[color2.before] = {};
-					}
-					//$('#processing-progress').text(colorIndex1 + '/' + colorIndex2 + '/' + colors.length );
-					var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
-					distanceGrid[color1.before][color2.before] = distance;
-					distanceGrid[color2.before][color1.before] = distance;
-					distanceList[color1.before+"-"+color2.before] = distance;
-				}
-			}
-			return {"grid":distanceGrid,"list":distanceList};
-		}
 		function exporterCouleurs() {
 			var colors = getColors();
 			var exporterCouleurs = "";
@@ -152,45 +143,47 @@ td {width: 60px; height: 25px; }
 			colors = colors.sort(function(str1, str2){
 				return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
 			});
-			var colorDistanceData = buildDistanceLabMatrix(colors);
-			console.log(colorDistanceData);
-			var seuil = parseFloat( $('#color-matrix-seuil').val() );
-			
-			if($("#color-proximity-group-build-checkbox").prop("checked")) {
+			useAsynchronousOperation("buildDistanceLabMatrix",{"colors":colors},function(colorDistanceData) {
+				//var colorDistanceData = buildDistanceLabMatrix(colors);
+				console.log(colorDistanceData);
+				var seuil = parseFloat( $('#color-matrix-seuil').val() );
 				
-				var tbodyGroupListElement = $('#proximity-color-group-list');
-				tbodyGroupListElement.empty();
-				
-				// TODO call buildColorsProximityGroupList
-				var colorGroups = buildColorsProximityGroupList(colorDistanceData["list"], colorDistanceData["grid"], seuil);
-				
-				// Display groups
-				for( var colorGroupIndex in colorGroups ) {
-					var colorGroupSet = colorGroups[colorGroupIndex];
-					var ulGroupElement = $('<ul/>');
-					var remplacementColor = "";
-					for( var colorInSet of colorGroupSet ) {
-						if( !remplacementColor ) {
-							remplacementColor = colorInSet;
+				if($("#color-proximity-group-build-checkbox").prop("checked")) {
+					
+					var tbodyGroupListElement = $('#proximity-color-group-list');
+					tbodyGroupListElement.empty();
+					
+					// TODO call buildColorsProximityGroupList
+					var colorGroups = buildColorsProximityGroupList(colorDistanceData["list"], colorDistanceData["grid"], seuil);
+					
+					// Display groups
+					for( var colorGroupIndex in colorGroups ) {
+						var colorGroupSet = colorGroups[colorGroupIndex];
+						var ulGroupElement = $('<ul/>');
+						var remplacementColor = "";
+						for( var colorInSet of colorGroupSet ) {
+							if( !remplacementColor ) {
+								remplacementColor = colorInSet;
+							}
+							ulGroupElement.append('<li><button type="button" onclick="$(this).parent().remove();" >Supprimer</button><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
 						}
-						ulGroupElement.append('<li><button type="button" onclick="$(this).parent().remove();" >Supprimer</button><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
+						tbodyGroupListElement.append(
+							$('<tr/>')
+								.append(
+									$('<td/>')
+									.append(ulGroupElement)
+								)
+								.append(
+									$('<td/>').append('<input type="text" class="color-input-after-code" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after\'));"/><input type="color" class="color-input-after" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after-code\'));"/>')
+								)
+						);
 					}
-					tbodyGroupListElement.append(
-						$('<tr/>')
-							.append(
-								$('<td/>')
-								.append(ulGroupElement)
-							)
-							.append(
-								$('<td/>').append('<input type="text" class="color-input-after-code" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after\'));"/><input type="color" class="color-input-after" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after-code\'));"/>')
-							)
-					);
 				}
-			}
-			
-			if($("#color-matrix-build-checkbox").prop("checked")) {
-				displayProximityMatrix(colors, colorDistanceData, seuil);
-			}
+				
+				if($("#color-matrix-build-checkbox").prop("checked")) {
+					displayProximityMatrix(colors, colorDistanceData, seuil);
+				}
+			});
 		}
 		function displayProximityMatrix(colors, colorDistanceData, seuil){
 			var tbodyElement = $('#proximity-color-distance-matrix');

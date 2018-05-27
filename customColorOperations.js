@@ -27,6 +27,31 @@ function sortColorsByDistanceToRef(colors, referenceW3Color) {
 	return colors;
 }
 
+function buildDistanceLabMatrix(colors,postInfosFunction){
+	var distanceGrid = {};
+	var distanceList = [];
+	for (var colorIndex1 = 0; colorIndex1 < colors.length; colorIndex1++) {
+		var color1 = colors[colorIndex1];
+		if(!(color1.before in distanceGrid)) {
+			distanceGrid[color1.before] = {};
+		}
+		for (var colorIndex2 = colorIndex1; colorIndex2 < colors.length; colorIndex2++) {
+			var color2 = colors[colorIndex2];
+			if(!(color2.before in distanceGrid)) {
+				distanceGrid[color2.before] = {};
+			}
+			if(postInfosFunction) {
+				postInfosFunction("progress",colorIndex1 + '/' + colorIndex2 + '/' + colors.length);
+			}
+			var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
+			distanceGrid[color1.before][color2.before] = distance;
+			distanceGrid[color2.before][color1.before] = distance;
+			distanceList[color1.before+"-"+color2.before] = distance;
+		}
+	}
+	return {"grid":distanceGrid,"list":distanceList};
+}
+
 function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConvertionOnlyInExistingColors) {
 	var transformVector = {};
 	transformVector.hue = targetW3Color.hue - sourceW3Color.hue;
