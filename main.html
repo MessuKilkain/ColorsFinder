@@ -109,7 +109,16 @@ td {width: 60px; height: 25px; }
 			for( var colorIndex in colors ) {
 				var color = colors[colorIndex];
 				if(color && color.before != color.after) {
-					exportConversion += color.before + " => " + color.after + "\n";
+					var colorBefore = color.before;
+					exportConversion += colorBefore;
+					if( 
+						colorBefore[1] == colorBefore[2]
+						&& colorBefore[3] == colorBefore[4]
+						&& colorBefore[5] == colorBefore[6]
+						) {
+						exportConversion += '|' + colorBefore[0]+colorBefore[1]+colorBefore[3]+colorBefore[5];
+					}
+					exportConversion += " => " + color.after + "\n";
 				}
 			}
 			$("#export-conversion").val(exportConversion);
@@ -129,8 +138,8 @@ td {width: 60px; height: 25px; }
 							&& colorBefore[3] == colorBefore[4]
 							&& colorBefore[5] == colorBefore[6]
 							) {
-								replacedColorArray.push(colorBefore[0]+colorBefore[1]+colorBefore[3]+colorBefore[5]);
-							}
+							replacedColorArray.push(colorBefore[0]+colorBefore[1]+colorBefore[3]+colorBefore[5]);
+						}
 					}
 				});
 				text += replacedColorArray.join('|') + ' => ' + colorAfter + '\n';
