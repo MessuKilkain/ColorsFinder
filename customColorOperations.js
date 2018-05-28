@@ -41,7 +41,7 @@ function buildDistanceLabMatrix(colors,postInfosFunction){
 				distanceGrid[color2.before] = {};
 			}
 			if(postInfosFunction) {
-				postInfosFunction("progress",colorIndex1 + '/' + colorIndex2 + '/' + colors.length);
+				postInfosFunction("progress","BuildDistanceLabMatrix progress : " + colorIndex1 + '/' + colorIndex2 + '/' + colors.length);
 			}
 			var distance = w3colorDistance(w3color(color1.before), w3color(color2.before));
 			distanceGrid[color1.before][color2.before] = distance;
@@ -75,7 +75,7 @@ function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConv
 	return conversionMap;
 }
 
-function buildColorsProximityGroupList(originalColorDistanceList, colorDistanceMatrix, seuil) {
+function buildColorsProximityGroupList(originalColorDistanceList, colorDistanceMatrix, seuil, postInfosFunction) {
 	var colorDistanceList = [];
 	for(var key in originalColorDistanceList) {
 		colorDistanceList.push(key);
@@ -89,6 +89,9 @@ function buildColorsProximityGroupList(originalColorDistanceList, colorDistanceM
 	// Build groups as first pass
 	for( var colorDistanceIndex in colorDistanceList ) {
 		var keys = colorDistanceList[colorDistanceIndex];
+		if(postInfosFunction) {
+			postInfosFunction("progress","buildColorsProximityGroupList initial progress : " + colorDistanceIndex + '/' + colorDistanceList.length);
+		}
 		
 		keys = keys.split('-');
 		
@@ -143,6 +146,9 @@ function buildColorsProximityGroupList(originalColorDistanceList, colorDistanceM
 		var mergedGroups = [];
 		var mergedGroupIndexes = new Set();
 		for( var colorGroupToMergeIndex = 0 ; colorGroupToMergeIndex < colorGroups.length ; colorGroupToMergeIndex++ ) {
+			if(postInfosFunction) {
+				postInfosFunction("progress","buildColorsProximityGroupList merging(" + safeCounter + ") progress : " + colorGroupToMergeIndex + '/' + colorGroups.length);
+			}
 			if(!mergedGroupIndexes.has(colorGroupToMergeIndex)) {
 				mergedGroupIndexes.add(colorGroupToMergeIndex);
 				var colorGroupSetToMerge = colorGroups[colorGroupToMergeIndex];

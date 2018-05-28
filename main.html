@@ -124,6 +124,13 @@ td {width: 60px; height: 25px; }
 					var colorBefore = $(element).val().toUpperCase();
 					if( colorAfter != colorBefore ) {
 						replacedColorArray.push(colorBefore);
+						if( 
+							colorBefore[1] == colorBefore[2]
+							&& colorBefore[3] == colorBefore[4]
+							&& colorBefore[5] == colorBefore[6]
+							) {
+								replacedColorArray.push(colorBefore[0]+colorBefore[1]+colorBefore[3]+colorBefore[5]);
+							}
 					}
 				});
 				text += replacedColorArray.join('|') + ' => ' + colorAfter + '\n';
@@ -154,30 +161,40 @@ td {width: 60px; height: 25px; }
 					tbodyGroupListElement.empty();
 					
 					// TODO call buildColorsProximityGroupList
-					var colorGroups = buildColorsProximityGroupList(colorDistanceData["list"], colorDistanceData["grid"], seuil);
-					
-					// Display groups
-					for( var colorGroupIndex in colorGroups ) {
-						var colorGroupSet = colorGroups[colorGroupIndex];
-						var ulGroupElement = $('<ul/>');
-						var remplacementColor = "";
-						for( var colorInSet of colorGroupSet ) {
-							if( !remplacementColor ) {
-								remplacementColor = colorInSet;
+					useAsynchronousOperation(
+						"buildColorsProximityGroupList",
+						{
+							"originalColorDistanceList":colorDistanceData["list"],
+							"colorDistanceMatrix":colorDistanceData["grid"],
+							"seuil":seuil
+						},
+						function(colorGroups) {
+							//var colorGroups = buildColorsProximityGroupList(colorDistanceData["list"], colorDistanceData["grid"], seuil);
+							
+							// Display groups
+							for( var colorGroupIndex in colorGroups ) {
+								var colorGroupSet = colorGroups[colorGroupIndex];
+								var ulGroupElement = $('<ul/>');
+								var remplacementColor = "";
+								for( var colorInSet of colorGroupSet ) {
+									if( !remplacementColor ) {
+										remplacementColor = colorInSet;
+									}
+									ulGroupElement.append('<li><button type="button" onclick="$(this).parent().remove();" >Supprimer</button><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
+								}
+								tbodyGroupListElement.append(
+									$('<tr/>')
+										.append(
+											$('<td/>')
+											.append(ulGroupElement)
+										)
+										.append(
+											$('<td/>').append('<input type="text" class="color-input-after-code" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after\'));"/><input type="color" class="color-input-after" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after-code\'));"/>')
+										)
+								);
 							}
-							ulGroupElement.append('<li><button type="button" onclick="$(this).parent().remove();" >Supprimer</button><input type="text" class="color-input-before-code" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before\'));"/><input type="color" class="color-input-before" value="'+colorInSet+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-before-code\'));"/></li>')
 						}
-						tbodyGroupListElement.append(
-							$('<tr/>')
-								.append(
-									$('<td/>')
-									.append(ulGroupElement)
-								)
-								.append(
-									$('<td/>').append('<input type="text" class="color-input-after-code" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after\'));"/><input type="color" class="color-input-after" value="'+remplacementColor+'" onchange="copyValTo(this,$(this).parent().find(\'input.color-input-after-code\'));"/>')
-								)
-						);
-					}
+					);
 				}
 				
 				if($("#color-matrix-build-checkbox").prop("checked")) {
