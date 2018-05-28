@@ -12,7 +12,7 @@ def matchAnyPattern(fileName, patternList):
 			return True
 	return False
 
-def findColorsMatches(rootDirectoryPath, regexPattern=u"(#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}))(?:[^0-9A-Fa-f]|$)", fileFilterList=[u"*"], fileIgnoreList=[], dirIgnoreList=[], colorsMatch=dict()):
+def findColorsMatches(rootDirectoryPath, regexPattern=u"(#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))(?:[^0-9A-Fa-f]|$)", fileFilterList=[u"*"], fileIgnoreList=[], dirIgnoreList=[], colorsMatch=dict()):
 	for root, dirs, files in os.walk(top=rootDirectoryPath, topdown=True):
 		files = [f for f in files if matchAnyPattern(f,fileFilterList)]
 		files = [f for f in files if not matchAnyPattern(f,fileIgnoreList)]
@@ -25,6 +25,8 @@ def findColorsMatches(rootDirectoryPath, regexPattern=u"(#([0-9A-Fa-f]{8}|[0-9A-
 				textfile.close()
 			for groupFound in re.finditer(regexPattern, filetext):
 				key = groupFound.group(1).upper()
+				if len(key) == 4:
+					key = key[0] + key[1] + key[1] + key[2] + key[2] + key[3] + key[3]
 				key = key[0:7]
 				try:
 					colorsMatch[key] = colorsMatch[key] + 1
