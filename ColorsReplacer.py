@@ -27,7 +27,7 @@ def replaceCoupleListInFile(rootDirectoryPath, replacementCoupleList=list(), fil
 				for line in file:
 					lineOut = line
 					for couple in replacementCoupleList:
-						lineOut = re.sub(couple[0],couple[1],lineOut)
+						lineOut = re.sub(u"(?P<prefix>[^0-9A-Fa-f&]|^)("+couple[0]+u")(?P<suffix>([0-9A-Fa-f]{2})?([^0-9A-Za-z]|$))", u"\g<prefix>"+couple[1]+u"\g<suffix>", lineOut, flags=re.IGNORECASE)
 					fileChanged = fileChanged or not (lineOut.strip() == line.strip())
 					print(lineOut, end='')
 			if not fileChanged:
