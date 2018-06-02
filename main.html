@@ -74,7 +74,8 @@ td {width: 60px; height: 25px; }
 		function sortingColorsLab(){
 			var colors = getColors();
 			var referenceW3Color = w3color($("#color-sorting-lab").val());
-			colors = sortColorsByDistanceToRef(colors, referenceW3Color);
+			var groupingReference = $("#color-sorting-lab-grouping-reference-checkbox").prop("checked");
+			colors = sortColorsByDistanceToRef(colors, referenceW3Color, groupingReference);
 			var tbody = $("#color-tbody");
 			tbody.empty();
 			for( var colorIndex in colors ) {
@@ -252,6 +253,7 @@ td {width: 60px; height: 25px; }
 		<div>
 			<input id="color-sorting-lab-code" onchange="copyValTo(this,'#color-sorting-lab');displayW3colorInfoTo(this,$(this).parent().find('.display-w3color-info'));" type="text"/>
 			<input id="color-sorting-lab" onchange="copyValTo(this,'#color-sorting-lab-code');displayW3colorInfoTo(this,$(this).parent().find('.display-w3color-info'));" type="color"/>
+			<label for="color-sorting-lab-grouping-reference-checkbox" >Sort grouping reference</label><input id="color-sorting-lab-grouping-reference-checkbox" type="checkbox"/>
 			<button type="button" onclick="sortingColorsLab();">Trier couleur(s) Lab</button>
 			<span style="display:none;" class='display-w3color-info'></span>
 			<input id="color-convert-target-code" onchange="copyValTo(this,'#color-convert-target');" type="text"/>

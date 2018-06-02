@@ -16,7 +16,8 @@ function w3colorDistance(colorA, colorB) {
 	);
 }
 
-function sortColorsByDistanceToRef(colors, referenceW3Color) {
+function sortColorsByDistanceToRef(colors, referenceW3Color, sortedAsReferenceGroup) {
+	var sortedColorList = [];
 	for( var colorIndex in colors ) {
 		var color = colors[colorIndex];
 		color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
@@ -24,7 +25,24 @@ function sortColorsByDistanceToRef(colors, referenceW3Color) {
 	colors = colors.sort(function(a, b){
 		return (a.distanceToRef - b.distanceToRef);
 	});
-	return colors;
+	if(sortedAsReferenceGroup) {
+		var colorsToSort = colors.slice();
+		sortedColorList.push(colorsToSort.shift());
+		while(colorsToSort.length > 0) {
+			colorsToSort = colorsToSort.sort(function(a, b){
+				var sum = 0;
+				for( var sortedColorIndex in sortedColorList ) {
+					var sortedW3Color = w3color(sortedColorList[sortedColorIndex].before);
+					sum = sum + w3colorDistance(w3color(a.before), sortedW3Color) - w3colorDistance(w3color(b.before), sortedW3Color);
+				}
+				return sum;
+			});
+			sortedColorList.push(colorsToSort.shift());
+		}
+	} else {
+		sortedColorList = colors;
+	}
+	return sortedColorList;
 }
 
 function buildDistanceLabMatrix(colors,postInfosFunction){
