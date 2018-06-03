@@ -16,28 +16,43 @@ function w3colorDistance(colorA, colorB) {
 	);
 }
 
-function sortColorsByDistanceToRef(colors, referenceW3Color, sortedAsReferenceGroup) {
+function sortColorsByDistanceToRef(colors, referenceW3Color, sortedAsReferenceGroup, postInfosFunction) {
 	var sortedColorList = [];
 	for( var colorIndex in colors ) {
 		var color = colors[colorIndex];
 		color.distanceToRef = w3colorDistance(w3color(color.before), referenceW3Color);
+		color.distanceCumulatedToPrev = color.distanceToRef;
+		if(postInfosFunction) {
+			postInfosFunction("progress","Distance to ref calculated for color " + color.before + ' (' + colorIndex + '/' + colors.length + ')');
+		}
 	}
 	colors = colors.sort(function(a, b){
 		return (a.distanceToRef - b.distanceToRef);
 	});
 	if(sortedAsReferenceGroup) {
 		var colorsToSort = colors.slice();
-		sortedColorList.push(colorsToSort.shift());
+		var lastReferenceColor = colorsToSort.shift();
+		// console.log("lastReferenceColor",lastReferenceColor);
+		sortedColorList.push(lastReferenceColor);
+		var lastReferenceW3Color = w3color(lastReferenceColor.before);
+		// console.log("lastReferenceW3Color",lastReferenceW3Color);
 		while(colorsToSort.length > 0) {
+			// console.log("lastReferenceW3Color",lastReferenceW3Color);
+			for( var colorIndex in colorsToSort ) {
+				var color = colorsToSort[colorIndex];
+				color.distanceCumulatedToPrev = color.distanceCumulatedToPrev + w3colorDistance(w3color(color.before), lastReferenceW3Color);
+			}
 			colorsToSort = colorsToSort.sort(function(a, b){
-				var sum = 0;
-				for( var sortedColorIndex in sortedColorList ) {
-					var sortedW3Color = w3color(sortedColorList[sortedColorIndex].before);
-					sum = sum + w3colorDistance(w3color(a.before), sortedW3Color) - w3colorDistance(w3color(b.before), sortedW3Color);
-				}
-				return sum;
+				return (a.distanceCumulatedToPrev - b.distanceCumulatedToPrev);
 			});
-			sortedColorList.push(colorsToSort.shift());
+			lastReferenceColor = colorsToSort.shift();
+			// console.log("lastReferenceColor",lastReferenceColor);
+			sortedColorList.push(lastReferenceColor);
+			lastReferenceW3Color = w3color(lastReferenceColor.before);
+			// console.log("lastReferenceW3Color",lastReferenceW3Color);
+			if(postInfosFunction) {
+				postInfosFunction("progress","Remaining colors to sort grouping : " + colorsToSort.length);
+			}
 		}
 	} else {
 		sortedColorList = colors;
@@ -70,7 +85,7 @@ function buildDistanceLabMatrix(colors,postInfosFunction){
 	return {"grid":distanceGrid,"list":distanceList};
 }
 
-function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConvertionOnlyInExistingColors) {
+function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConvertionOnlyInExistingColors, postInfosFunction) {
 	var transformVector = {};
 	transformVector.hue = targetW3Color.hue - sourceW3Color.hue;
 	transformVector.sat = targetW3Color.sat - sourceW3Color.sat;
@@ -78,6 +93,7 @@ function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConv
 	var conversionMap = {};
 	var colorCompleteList = colors.slice();
 	for( var colorMainLoopIndex in colorCompleteList ) {
+		var messageForColorAtIndex = "buildColorsConvertionMap for color at index : " + colorMainLoopIndex + '/' + colorCompleteList.length;
 		var colorBeforeCode = colorCompleteList[colorMainLoopIndex].before;
 		var colorBefore = w3color(colorBeforeCode);
 		colorBefore.hue = (colorBefore.hue + transformVector.hue + 360) % 360;
@@ -85,10 +101,22 @@ function buildColorsConvertionMap(colors, sourceW3Color, targetW3Color, findConv
 		colorBefore.lightness = Math.max(Math.min(colorBefore.lightness + transformVector.lightness, 1.0), 0.0);
 		var newColorAfter = w3color(colorBefore.toHslString());
 		if( findConvertionOnlyInExistingColors ) {
-			var sortedColors = sortColorsByDistanceToRef(colors, newColorAfter);
+			var sortedColors = sortColorsByDistanceToRef(
+				colors,
+				newColorAfter,
+				false,
+				function(key,message){
+					if(postInfosFunction) {
+						postInfosFunction(key,messageForColorAtIndex + ' => ' + message);
+					}
+				}
+			);
 			newColorAfter = w3color(sortedColors[0].before);
 		}
 		conversionMap[colorBeforeCode] = newColorAfter.toHexString();
+		if(postInfosFunction) {
+			postInfosFunction("progress",messageForColorAtIndex + ' : DONE ');
+		}
 	}
 	return conversionMap;
 }
